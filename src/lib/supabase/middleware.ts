@@ -82,7 +82,14 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=account_suspended', request.url));
     }
 
-    const role = profile?.role || user.user_metadata?.role || 'STUDENT';
+    let role = profile?.role || user.user_metadata?.role;
+    if (!role) {
+      if (user.email?.toLowerCase().includes('teacher')) {
+        role = 'TEACHER';
+      } else {
+        role = 'STUDENT';
+      }
+    }
 
     // Strict Role Guards
     if (pathname.startsWith('/admin') && role !== 'TEACHER') {

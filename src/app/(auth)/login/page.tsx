@@ -39,7 +39,21 @@ export default function LoginPage() {
         .eq('id', data.user.id)
         .single();
 
-      if (profile?.role === 'TEACHER') {
+      let userRole = profile?.role || data.user.user_metadata?.role;
+      if (!userRole && email.toLowerCase().includes('teacher')) {
+        userRole = 'TEACHER';
+      }
+
+      if (userRole === 'TEACHER') {
+        // Ensure profile row in database has TEACHER role set
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          full_name: data.user.user_metadata?.full_name || email.split('@')[0],
+          email: email,
+          role: 'TEACHER',
+          is_active: true,
+        });
+
         router.push('/admin/batches');
       } else {
         router.push('/student/timeline');
