@@ -18,9 +18,10 @@
 - **Recorded Sessions & Watch Analytics**: Stream recorded classes with live watch progress logging (watched duration, completion %, and student view logs).
 - **Course Materials Vault**: Upload study guides (.pdf, .docx, .ppt) to Cloudinary with target scope (**Specific Batch** OR **All Batches (Global)**).
 - **AI & Manual Quiz Studio**:
-  - **Gemini Chat AI Generator**: Generate CEFR multiple-choice quizzes from natural prompts.
+  - **Gemini Chat AI Generator**: Generate CEFR multiple-choice quizzes from natural prompts with intelligent prompt sanitization and clean topic extraction.
+  - **PPT & Slide AI Builder**: Upload or paste PowerPoint slides / study notes, and Gemini AI generates a CEFR quiz tailored directly to that PPT content!
   - **Google Forms & ChatGPT Parser**: Paste raw quiz text to convert into interactive quizzes.
-  - **Draft Preview & Explanations**: Edit questions and step-by-step answer explanations before publishing.
+  - **Text-Wrapping Question Editor**: Auto-expanding textareas for questions, options, and explanations ensuring full readability on mobile screens.
 - **Homework & Grading Terminal**: Review student homework files and award scores.
 
 ### 🎓 Student Portal
@@ -32,9 +33,10 @@
 - **Gamified Leaderboard**: Rank among active enrolled students for points.
 - **Account Customization & PFP Avatar**: Update display name and upload custom PFP avatar images to Cloudinary CDN.
 - **Native Responsive Mobile UI**:
-  - Sleek mobile top bar with 1-tap Theme Switcher, Native App Installation prompt, Role Switcher, and Avatar.
-  - Horizontally scrollable Mobile Bottom Navigation Bar for 1-tap switching across all sections.
-  - Theme Switcher support with instant dark/light mode toggling on smartphones.
+  - Landing Page header with 1-tap ThemeToggle switcher (Sun/Moon icon) and responsive mobile button alignment.
+  - Native 5-tab Mobile Bottom Navigation Bar (`Batches`, `Roster`, `Quizzes`, `Fees`, `More...`) with 0 horizontal scrolling.
+  - Slide-over Full Navigation & Profile Drawer with 1-tap theme toggle, PWA installer, and role switcher.
+  - High-res 512x512 / 192x192 glowing PWA app icon for Android & iOS home screens.
 
 ---
 
@@ -47,7 +49,7 @@
 - **Cloud Storage**: Cloudinary CDN (`next-cloudinary`)
 - **Artificial Intelligence**: Google Gemini 2.5 AI (`@google/genai`)
 - **Offline Storage**: Dexie.js (IndexedDB)
-- **Mobile PWA**: Web App Manifest (`manifest.json`)
+- **Mobile PWA**: Web App Manifest (`manifest.json`) + High-Res PNG App Icons
 - **Styling**: Tailwind CSS v4 + Vanilla CSS Variables
 
 ---
@@ -93,10 +95,13 @@
 
 ---
 
-## 📱 Mobile App (PWA) Installation
+## 📱 Mobile App (PWA) & Play Store Publishing
 
 - **Android (Chrome)**: Open live URL $\rightarrow$ Tap 3 dots menu $\rightarrow$ **"Add to Home Screen"** or **"Install App"**.
 - **iOS (Safari)**: Open live URL $\rightarrow$ Tap Share icon $\rightarrow$ **"Add to Home Screen"**.
+- **Google Play Store (TWA App)**:
+  - Generate an APK/AAB bundle via [PWABuilder](https://www.pwabuilder.com/) using `https://lms-sooty-pi.vercel.app`.
+  - Any code updates pushed to Vercel instantly update inside the Play Store app automatically without requiring new APK uploads!
 
 ---
 

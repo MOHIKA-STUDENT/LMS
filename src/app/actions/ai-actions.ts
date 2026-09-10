@@ -2,7 +2,7 @@
 
 import { currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db/prisma';
-import { generateQuizWithGemini, proofreadHomeworkWithGemini, sanitizeTopic } from '@/lib/ai/gemini';
+import { generateQuizWithGemini, generateQuizFromPPTWithGemini, proofreadHomeworkWithGemini, sanitizeTopic } from '@/lib/ai/gemini';
 import { CEFRLevel } from '@prisma/client';
 
 export async function generateQuizAction(
@@ -37,6 +37,34 @@ export async function generateQuizAction(
   }
 }
 
+export async function generateQuizFromPPTAction(
+  pptText: string,
+  cefrLevel: CEFRLevel = 'B1'
+) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    if (!pptText || pptText.trim().length < 20) {
+      return { success: false, error: 'Please paste or upload at least 20 characters of PPT slide text.' };
+    }
+
+    const quizData = await generateQuizFromPPTWithGemini(pptText, cefrLevel as any);
+
+    return {
+      success: true,
+      quizDraft: {
+        title: quizData.title || `${cefrLevel} PPT Lesson Quiz`,
+        topic: quizData.cleanTopic || 'PPT Slide Concepts',
+        cefrLevel,
+        questions: quizData.questions,
+      },
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to generate quiz from PPT content.' };
+  }
+}
+
 export async function parseRawQuizTextAction(rawText: string, cefrLevel: CEFRLevel = 'B1') {
   try {
     const user = await currentUser();
@@ -46,7 +74,6 @@ export async function parseRawQuizTextAction(rawText: string, cefrLevel: CEFRLev
       return { success: false, error: 'Please paste at least one full question with options.' };
     }
 
-    // Call Gemini to parse raw quiz text / Google Forms into JSON questions
     const quizData = await generateQuizWithGemini(`Parse this quiz text into 5 structured multiple choice questions with options and explanations: "${rawText.slice(0, 2000)}"`, cefrLevel);
 
     return {

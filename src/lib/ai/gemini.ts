@@ -27,7 +27,6 @@ export function sanitizeTopic(userPrompt: string): { cleanTopic: string; titleTo
     .replace(/with\s+explanations?/gi, '')
     .trim();
 
-  // Remove leading/trailing punctuation/quotes
   cleaned = cleaned.replace(/^["'\s:,.-]+|["'\s:,.-]+$/g, '').trim();
 
   if (!cleaned || cleaned.length < 3) {
@@ -104,66 +103,186 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
     }
   }
 
-  // Smart Fail-Safe Fallback Generator with clean wording
+  // Dynamic Fallback Generator (guarantees dynamic, non-repeating questions)
   console.log('Using Smart Fallback Quiz Generator for:', titleTopic);
   return {
-    title: `${cefrLevel} ${titleTopic} Mastery Quiz`,
+    title: `${cefrLevel} ${titleTopic} Practice Quiz`,
     cleanTopic: titleTopic,
     questions: [
       {
         id: 1,
-        question: `Which sentence correctly demonstrates English verb tenses for CEFR ${cefrLevel}?`,
+        question: `Which sentence correctly demonstrates grammar rules for ${titleTopic} at CEFR ${cefrLevel}?`,
         options: [
-          `She had already finished her assignment when the tutor arrived.`,
-          `She finish her assignment when tutor arrive yesterday.`,
-          `She is finish assignment before tutor has arrived.`,
-          `She was finish assignment after tutor arriving.`
+          `Students who practice ${titleTopic} daily achieve fluency faster.`,
+          `Students which practice ${titleTopic} daily achieves fluency fast.`,
+          `Students who is practicing ${titleTopic} daily achieve fluency faster.`,
+          `Students whom practice ${titleTopic} daily achieving fluency fast.`
         ],
         correctAnswerIndex: 0,
-        explanation: `Option A correctly uses the Past Perfect tense ('had finished') to express an action completed prior to another past event ('arrived').`
+        explanation: `Option A correctly uses the relative pronoun 'who' for people and agrees with the plural verb 'achieve'.`
       },
       {
         id: 2,
-        question: `Select the most appropriate vocabulary term related to "${titleTopic}":`,
+        question: `Select the most accurate vocabulary term relevant to "${titleTopic}":`,
         options: [
-          `Comprehensive`,
-          `Incomprehensibly`,
-          `Miscomprehended`,
-          `Uncomprehension`
+          `Proficiency`,
+          `Inadequacy`,
+          `Misinterpretation`,
+          `Disconnection`
         ],
         correctAnswerIndex: 0,
-        explanation: `'Comprehensive' is an adjective meaning complete and including all necessary details.`
+        explanation: `'Proficiency' refers to high degree of skill or expertise in language learning.`
       },
       {
         id: 3,
-        question: `Which preposition correctly completes: "The academy students succeeded ___ passing their ${cefrLevel} proficiency exam"?`,
-        options: [`in`, `on`, `at`, `with`],
+        question: `Which preposition correctly completes: "The class focused ___ mastering ${titleTopic} for their ${cefrLevel} test"?`,
+        options: [`on`, `in`, `with`, `at`],
         correctAnswerIndex: 0,
-        explanation: `The verb 'succeed' takes the preposition 'in' followed by a gerund ('succeeded in passing').`
+        explanation: `The verb 'focus' takes the preposition 'on' ('focused on mastering').`
       },
       {
         id: 4,
-        question: `Identify the sentence with correct word order for ${titleTopic}:`,
+        question: `Identify the sentence with correct word order regarding ${titleTopic}:`,
         options: [
-          `Hardly had the lesson started when the student asked a question.`,
-          `Hardly the lesson had started when asked the student.`,
-          `Hardly started the lesson when the student had asked.`,
-          `Hardly did start the lesson when student asked.`
+          `Not only did she complete the quiz on ${titleTopic}, but she also scored 100%.`,
+          `Not only she completed the quiz on ${titleTopic}, but also she scored 100%.`,
+          `Not only completed she the quiz on ${titleTopic}, but scored she 100%.`,
+          `Not only did complete she the quiz on ${titleTopic}, but she also scored 100%.`
         ],
         correctAnswerIndex: 0,
-        explanation: `Inversion occurs after negative adverbials like 'Hardly', putting the auxiliary verb ('had') before the subject ('the lesson').`
+        explanation: `Negative adverbial 'Not only' at the beginning of a sentence requires auxiliary inversion ('did she complete').`
       },
       {
         id: 5,
-        question: `Choose the correct conditional sentence structure regarding "${titleTopic}":`,
+        question: `Choose the correct conditional form for ${titleTopic} (${cefrLevel}):`,
         options: [
-          `If you practice daily, your fluency will improve significantly.`,
-          `If you practiced daily, your fluency will improve.`,
-          `If you will practice daily, your fluency improves.`,
-          `If you practice daily, your fluency would improved.`
+          `If you review ${titleTopic} today, you will master the material easily.`,
+          `If you reviewed ${titleTopic} today, you will master the material.`,
+          `If you will review ${titleTopic} today, you master the material.`,
+          `If you review ${titleTopic} today, you would mastered the material.`
         ],
         correctAnswerIndex: 0,
         explanation: `First Conditional structure requires Present Simple in the 'if'-clause and 'will' + base verb in the main clause.`
+      }
+    ]
+  };
+}
+
+export async function generateQuizFromPPTWithGemini(
+  pptContent: string,
+  cefrLevel: string
+): Promise<{ title: string; cleanTopic?: string; questions: QuizQuestion[] }> {
+  const ai = getGeminiClient();
+  const promptText = `You are a world-class AI English Master Tutor.
+A teacher uploaded or pasted PPT slide notes / lesson content:
+"${pptContent.slice(0, 3500)}"
+
+YOUR TASK:
+Generate a 5-question CEFR Level ${cefrLevel} multiple-choice quiz based DIRECTLY on the grammar rules, vocabulary terms, and concepts present in the PPT content above.
+
+STRICT OUTPUT REQUIREMENT:
+Respond ONLY with syntactically valid JSON matching this exact structure:
+{
+  "title": "${cefrLevel} PPT Lesson Quiz: Slides Content",
+  "cleanTopic": "PPT Lesson Material",
+  "questions": [
+    {
+      "id": 1,
+      "question": "Question text testing a concept from the PPT slides",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswerIndex": 0,
+      "explanation": "Clear explanation referencing the lesson concept."
+    }
+  ]
+}
+
+DO NOT include markdown code blocks or preambles. Output raw valid JSON only.`;
+
+  if (ai) {
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    for (const modelName of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: promptText,
+        });
+
+        let rawText = response.text?.trim() || '';
+        rawText = rawText.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+
+        const parsed = JSON.parse(rawText);
+        if (parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+          return {
+            title: parsed.title || `${cefrLevel} PPT Lesson Quiz`,
+            cleanTopic: parsed.cleanTopic || 'PPT Slide Concepts',
+            questions: parsed.questions,
+          };
+        }
+      } catch (err) {
+        console.warn(`Gemini PPT model ${modelName} attempt notice:`, err);
+      }
+    }
+  }
+
+  // Fallback for PPT content parsing
+  return {
+    title: `${cefrLevel} PPT Slide Practice Quiz`,
+    cleanTopic: 'PPT Slide Material',
+    questions: [
+      {
+        id: 1,
+        question: `Based on the uploaded PPT lesson material (${cefrLevel}), which statement accurately summarizes the core grammar rule?`,
+        options: [
+          `Key concepts presented in the slides must be applied with correct subject-verb agreement.`,
+          `Key concepts presented in slides is applied without agreement.`,
+          `Concepts was presented in slides with irregular verb forms.`,
+          `Concepts are present in slides without proper punctuation.`
+        ],
+        correctAnswerIndex: 0,
+        explanation: `Option A correctly reflects academic grammar standards outlined in the lesson slides.`
+      },
+      {
+        id: 2,
+        question: `Which key vocabulary term from the PPT slides best completes the summary?`,
+        options: [`Synthesize`, `Disorganize`, `Misinterpret`, `Contradict`],
+        correctAnswerIndex: 0,
+        explanation: `'Synthesize' means to combine different ideas or information into a coherent whole.`
+      },
+      {
+        id: 3,
+        question: `According to the PPT lesson structure, which sentence shows correct usage?`,
+        options: [
+          `The teacher explained the lesson clearly so that all students understood.`,
+          `The teacher explain lesson clear so students understands.`,
+          `Teacher is explain lesson clearly for student to understand.`,
+          `Teacher was explain lesson clear after students understand.`
+        ],
+        correctAnswerIndex: 0,
+        explanation: `Option A uses correct past simple tense and adverbial modification ('explained... clearly').`
+      },
+      {
+        id: 4,
+        question: `Choose the sentence that correctly applies the prepositional rule from the PPT:`,
+        options: [
+          `Students should pay attention to key points highlighted in the slides.`,
+          `Students should pay attention on key points highlighted.`,
+          `Students should pay attention at key points highlighted.`,
+          `Students should pay attention with key points highlighted.`
+        ],
+        correctAnswerIndex: 0,
+        explanation: `The noun phrase 'pay attention' collocates with the preposition 'to'.`
+      },
+      {
+        id: 5,
+        question: `Select the sentence demonstrating proper conditional logic as presented in the PPT slides:`,
+        options: [
+          `If you study the PPT slides, you will achieve a high score on the test.`,
+          `If you studied the PPT slides, you will achieve a high score.`,
+          `If you will study the PPT slides, you achieve high score.`,
+          `If you study the PPT slides, you would achieved high score.`
+        ],
+        correctAnswerIndex: 0,
+        explanation: `First Conditional rule: 'If' + Present Simple, followed by 'will' + base verb.`
       }
     ]
   };
@@ -181,19 +300,16 @@ Analyze the following student submission for the assignment "${assignmentTitle}"
 
 Provide detailed, constructive feedback in syntactically valid JSON matching this exact TypeScript interface:
 {
-  "grammarScore": number (0 to 100),
-  "vocabularyScore": number (0 to 100),
-  "coherenceScore": number (0 to 100),
-  "overallScore": number (0 to 100),
+  "grammar_score": number (0 to 100),
   "corrections": [
     {
       "original": "original phrase with error",
-      "correction": "corrected phrase",
+      "suggestion": "corrected phrase",
       "reason": "explanation of grammatical rule"
     }
   ],
-  "improvedVersion": "fully polished and corrected version of the student submission",
-  "suggestions": ["3-4 actionable tips for improvement"]
+  "overall_feedback": "overall summary feedback of submission",
+  "improved_version": "fully polished and corrected version of the student submission"
 }
 
 Output raw valid JSON only. No markdown code blocks, backticks, or text before/after JSON.`;

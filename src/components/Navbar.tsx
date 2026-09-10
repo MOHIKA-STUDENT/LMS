@@ -27,6 +27,8 @@ import {
   X,
   ChevronRight,
   ShieldCheck,
+  MoreHorizontal,
+  Grid,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -78,24 +80,27 @@ export default function Navbar({ profile }: NavbarProps) {
   const teacherLinks = [
     { href: '/admin/batches', label: 'Batches', icon: LayoutDashboard },
     { href: '/admin/roster', label: 'Roster', icon: Users },
+    { href: '/admin/quiz-gen', label: 'Quizzes', icon: Sparkles },
     { href: '/admin/attendance-fees', label: 'Attendance & Fees', icon: CreditCard },
     { href: '/admin/recordings', label: 'Recordings', icon: Video },
     { href: '/admin/materials', label: 'Materials', icon: BookOpen },
-    { href: '/admin/quiz-gen', label: 'Quizzes', icon: Sparkles },
     { href: '/admin/grading', label: 'Grading', icon: CheckSquare },
   ];
 
   const studentLinks = [
     { href: '/student/timeline', label: 'Schedule', icon: Calendar },
+    { href: '/student/quizzes', label: 'Quizzes', icon: Sparkles },
+    { href: '/student/homework', label: 'Homework', icon: FileText },
+    { href: '/student/notes', label: 'Vault', icon: BookOpen },
     { href: '/student/recordings', label: 'Recordings', icon: Video },
     { href: '/student/fees-attendance', label: 'Fees & Attendance', icon: UserCheck },
-    { href: '/student/quizzes', label: 'Quizzes', icon: Sparkles },
-    { href: '/student/notes', label: 'Vault', icon: BookOpen },
-    { href: '/student/homework', label: 'Homework', icon: FileText },
     { href: '/student/leaderboard', label: 'Leaderboard', icon: Award },
   ];
 
   const navLinks = isTeacher ? teacherLinks : studentLinks;
+
+  // Primary 4 tabs for mobile bottom bar (no scrolling required!)
+  const mobilePrimaryLinks = navLinks.slice(0, 4);
 
   return (
     <>
@@ -187,24 +192,24 @@ export default function Navbar({ profile }: NavbarProps) {
               <UserButton />
             </div>
 
-            {/* MOBILE-ONLY CLEAN PROFILE TRIGGER BUTTON */}
+            {/* MOBILE-ONLY CLEAN PROFILE & MENU TRIGGER BUTTON */}
             <div className="md:hidden flex items-center space-x-2">
               <button
                 onClick={() => setProfileDrawerOpen(true)}
                 className="p-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 flex items-center space-x-1.5 shadow-sm active:scale-95 transition-all"
-                aria-label="Open Profile & Settings Menu"
+                aria-label="Open Navigation & Profile Menu"
               >
                 <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold uppercase">
                   {displayName?.charAt(0) || 'U'}
                 </div>
-                <User className="w-4 h-4 text-indigo-500 mr-0.5" />
+                <Grid className="w-4 h-4 text-indigo-500 mr-0.5" />
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* MOBILE PROFILE & SETTINGS DRAWER MODAL */}
+      {/* MOBILE FULL NAVIGATION & PROFILE DRAWER MODAL */}
       {profileDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end animate-fadeIn md:hidden">
           <div className="w-[85%] max-w-sm bg-theme-card border-l border-theme h-full flex flex-col justify-between shadow-2xl p-5 overflow-y-auto">
@@ -234,9 +239,39 @@ export default function Navbar({ profile }: NavbarProps) {
                 </button>
               </div>
 
-              {/* Quick Preferences & Controls */}
-              <div className="space-y-3">
-                <p className="text-[10px] font-bold uppercase text-theme-sub tracking-wider">Preferences</p>
+              {/* All Section Links */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase text-theme-sub tracking-wider">All Sections</p>
+
+                <div className="grid grid-cols-1 gap-1">
+                  {navLinks.map((link) => {
+                    const Icon = link.icon;
+                    const isActive = pathname.startsWith(link.href);
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setProfileDrawerOpen(false)}
+                        className={`p-3 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
+                          isActive
+                            ? 'bg-indigo-600/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 font-bold'
+                            : 'text-theme-sub hover:bg-slate-200/60 dark:hover:bg-slate-800 hover:text-theme-main'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Icon className="w-4 h-4 text-indigo-500" />
+                          <span>{link.label}</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-theme-sub" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Preferences & Quick Actions */}
+              <div className="space-y-3 pt-2 border-t border-theme">
+                <p className="text-[10px] font-bold uppercase text-theme-sub tracking-wider">App Preferences</p>
 
                 {/* LIGHT / DARK THEME TOGGLE BUTTON */}
                 <button
@@ -315,57 +350,51 @@ export default function Navbar({ profile }: NavbarProps) {
                     <ChevronRight className="w-4 h-4 text-purple-500" />
                   </Link>
                 )}
-
-                {!isTeacher && (
-                  <Link
-                    href="/student/settings"
-                    onClick={() => setProfileDrawerOpen(false)}
-                    className="w-full p-3.5 bg-theme-card-sub border border-theme rounded-2xl flex items-center justify-between hover:opacity-90 transition-all text-left block"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 text-theme-main flex items-center justify-center">
-                        <Settings className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-theme-main">Account Settings</p>
-                        <p className="text-[10px] text-theme-sub mt-0.5">Edit display name & profile</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-theme-sub" />
-                  </Link>
-                )}
               </div>
             </div>
 
             {/* Drawer Footer & Account Sign Out */}
-            <div className="pt-4 border-t border-theme flex items-center justify-between">
-              <span className="text-[11px] text-theme-sub font-mono">Account Options</span>
+            <div className="pt-4 border-t border-theme flex items-center justify-between mt-4">
+              <span className="text-[11px] text-theme-sub font-mono">Account Profile</span>
               <UserButton />
             </div>
           </div>
         </div>
       )}
 
-      {/* Clean Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-theme-card/95 backdrop-blur border-t border-theme px-1 py-1.5 flex items-center justify-between overflow-x-auto text-theme-sub shadow-2xl no-scrollbar">
-        {navLinks.map((link) => {
+      {/* ULTRA-CLEAN 5-TAB MOBILE BOTTOM NAVIGATION BAR (Fits 100% of screens with NO scrolling!) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-theme-card/95 backdrop-blur border-t border-theme px-2 py-1.5 grid grid-cols-5 gap-1 text-theme-sub shadow-2xl">
+        {mobilePrimaryLinks.map((link) => {
           const Icon = link.icon;
           const isActive = pathname.startsWith(link.href);
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center justify-center py-1 px-2.5 min-w-[62px] rounded-lg text-[10px] font-medium transition-all ${
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl text-[10px] font-medium transition-all ${
                 isActive
                   ? 'text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-500/10 scale-105'
                   : 'hover:text-theme-main'
               }`}
             >
               <Icon className="w-4 h-4 mb-0.5" />
-              <span className="truncate max-w-[58px] text-[10px]">{link.label}</span>
+              <span className="truncate max-w-[56px] text-[10px]">{link.label}</span>
             </Link>
           );
         })}
+
+        {/* 5th Tab: MORE Button */}
+        <button
+          onClick={() => setProfileDrawerOpen(true)}
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl text-[10px] font-medium transition-all ${
+            profileDrawerOpen
+              ? 'text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-500/10 scale-105'
+              : 'hover:text-theme-main'
+          }`}
+        >
+          <MoreHorizontal className="w-4 h-4 mb-0.5 text-indigo-500" />
+          <span className="truncate max-w-[56px] text-[10px] font-bold">More...</span>
+        </button>
       </nav>
     </>
   );
