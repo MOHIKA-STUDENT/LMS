@@ -56,15 +56,17 @@ export async function generateQuizWithGemini(
     ? `${topic} (Additional notes: ${customPrompt.trim()})`
     : topic;
 
-  const promptText = `You are a world-class AI English Master Tutor creating a professional, CEFR-aligned quiz.
-The teacher submitted this topic/prompt: "${combinedTopic}".
+  const promptText = `You are a world-renowned All-Rounder Master Professor & Educator across all domain branches (Grammar, Literature, Academic Writing, Business, Science, Technical, IELTS/TOEFL, and Professional Education).
+The teacher submitted this lesson topic/prompt: "${combinedTopic}".
 
-YOUR INSTRUCTIONS:
-1. Extract the TRUE underlying learning concept (e.g., "Articles (A, An, The)", "Present Perfect Tense", "Business English Vocabulary").
-2. Create a clean, professional Quiz Title (e.g., "${cefrLevel} ${titleTopic} Practice Quiz").
-3. Generate 5 realistic multiple-choice questions aligned with CEFR Level ${cefrLevel}.
-4. CRITICAL: Questions must test actual grammar, vocabulary, or comprehension rules directly.
-   DO NOT generate meta sentences like "Students who practice Articles..." or copy raw prompt text into questions.
+YOUR EXPERT INSTRUCTIONS:
+1. Identify the core subject, grammar rule, vocabulary, or academic concept from the prompt.
+2. Create a clean, professional Quiz Title (e.g., "${cefrLevel} ${titleTopic} Master Quiz").
+3. Generate 5 realistic, high-quality multiple-choice questions aligned with difficulty Level ${cefrLevel}.
+4. CRITICAL RULES:
+   - Questions must directly test the student's mastery of the subject, grammar rule, or vocabulary term.
+   - Options must be plausible choices. DO NOT repeat the prompt instructions or meta-sentences like "Create test today" inside the options or questions.
+   - Explanations must provide clear, pedagogical step-by-step reasoning.
 
 STRICT OUTPUT REQUIREMENT:
 Respond ONLY with syntactically valid JSON matching this exact TypeScript structure:
@@ -77,7 +79,7 @@ Respond ONLY with syntactically valid JSON matching this exact TypeScript struct
       "question": "Realistic question testing the concept directly",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctAnswerIndex": 0,
-      "explanation": "Clear step-by-step explanation of why this answer is correct."
+      "explanation": "Clear step-by-step pedagogical explanation."
     }
   ]
 }
@@ -110,15 +112,15 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
     }
   }
 
-  // Dynamic Concept-Driven Fallback Generator (Clean, realistic English questions)
-  console.log('Using Smart Concept Fallback Quiz Generator for:', titleTopic);
+  // Dynamic Concept-Driven Fallback Generator (Clean, realistic academic questions)
+  console.log('Using All-Rounder Master Professor Fallback Quiz Generator for:', titleTopic);
   return {
     title: `${cefrLevel} ${titleTopic} Practice Quiz`,
     cleanTopic: titleTopic,
     questions: [
       {
         id: 1,
-        question: `Which sentence correctly demonstrates article usage ('a', 'an', 'the') in English?`,
+        question: `Which sentence correctly demonstrates article usage ('a', 'an', 'the') in academic English?`,
         options: [
           `She bought an apple and a book from the market.`,
           `She bought a apple and an book from market.`,
@@ -130,14 +132,14 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
       },
       {
         id: 2,
-        question: `Choose the correct article to complete: "He decided to study at ___ university in London."`,
+        question: `Choose the correct article or modifier to complete: "He decided to study at ___ university in London."`,
         options: [`a`, `an`, `the`, `(no article)`],
         correctAnswerIndex: 0,
         explanation: `'University' starts with a consonant 'y' sound (/juː/), so the indefinite article 'a' is required.`
       },
       {
         id: 3,
-        question: `Identify the sentence with correct article rules before uncountable nouns:`,
+        question: `Identify the sentence with correct grammar rules before abstract and uncountable nouns:`,
         options: [
           `Wisdom and knowledge are more valuable than gold.`,
           `A wisdom and a knowledge are more valuable than a gold.`,
@@ -156,12 +158,12 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
       },
       {
         id: 5,
-        question: `Choose the correct conditional sentence structure regarding ${titleTopic} (${cefrLevel}):`,
+        question: `Choose the grammatically correct conditional sentence structure for ${cefrLevel} proficiency:`,
         options: [
-          `If you review ${titleTopic} today, you will master the material easily.`,
-          `If you reviewed ${titleTopic} today, you will master the material.`,
-          `If you will review ${titleTopic} today, you master the material.`,
-          `If you review ${titleTopic} today, you would mastered the material.`
+          `If you review your lesson notes today, you will master the topic easily.`,
+          `If you reviewed your lesson notes today, you will master the topic.`,
+          `If you will review your lesson notes today, you master the topic.`,
+          `If you review your lesson notes today, you would mastered the topic.`
         ],
         correctAnswerIndex: 0,
         explanation: `First Conditional rule: 'If' + Present Simple in the condition clause, followed by 'will' + base verb in the result clause.`

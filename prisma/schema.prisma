@@ -134,6 +134,7 @@ model QuizSubmission {
   score            Int
   totalQuestions   Int      @default(5)
   answersSubmitted Json
+  attemptNumber    Int      @default(1)
   completedAt      DateTime @default(now())
 
   quiz    Quiz    @relation(fields: [quizId], references: [id], onDelete: Cascade)
@@ -176,14 +177,15 @@ model FeeRecord {
 
 model RecordedSession {
   id              String   @id @default(uuid())
-  batchId         String
+  batchId         String?
+  isGlobal        Boolean  @default(false)
   title           String
   description     String?
   videoUrl        String
   durationSeconds Int      @default(0)
   createdAt       DateTime @default(now())
 
-  batch     Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch     Batch?            @relation(fields: [batchId], references: [id], onDelete: Cascade)
   watchLogs SessionWatchLog[]
 
   @@map("recorded_sessions")

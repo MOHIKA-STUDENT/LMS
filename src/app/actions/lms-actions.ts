@@ -469,6 +469,15 @@ export async function submitQuizAction(quizId: string, pointsEarned: number, ans
     const user = await currentUser();
     if (!user) return { success: false, error: 'Unauthorized.' };
 
+    const previousAttemptsCount = await prisma.quizSubmission.count({
+      where: {
+        quizId,
+        studentId: user.id,
+      },
+    });
+
+    const attemptNumber = previousAttemptsCount + 1;
+
     const submission = await prisma.quizSubmission.create({
       data: {
         quizId,
@@ -476,6 +485,7 @@ export async function submitQuizAction(quizId: string, pointsEarned: number, ans
         score: pointsEarned,
         totalQuestions: 5,
         answersSubmitted: answersSubmitted || {},
+        attemptNumber,
       },
     });
 
@@ -487,9 +497,71 @@ export async function submitQuizAction(quizId: string, pointsEarned: number, ans
       },
     });
 
-    return { success: true, submission };
+    return { success: true, submission, attemptNumber };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to submit quiz.' };
+  }
+}
+
+export async function updateQuizAction(data: {
+  id: string;
+  batchId?: string | null;
+  isGlobal?: boolean;
+  title: string;
+  cefrLevel: CEFRLevel;
+  topic: string;
+  questions?: any[];
+}) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const quiz = await prisma.quiz.update({
+      where: { id: data.id },
+      data: {
+        batchId: data.isGlobal ? null : (data.batchId || null),
+        isGlobal: !!data.isGlobal,
+        title: data.title,
+        cefrLevel: data.cefrLevel,
+        topic: data.topic,
+        ...(data.questions ? { questions: data.questions } : {}),
+      },
+    });
+
+    return { success: true, quiz };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update quiz.' };
+  }
+}
+
+export async function deleteQuizAction(id: string) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    await prisma.quiz.delete({
+      where: { id },
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to delete quiz.' };
+  }
+}
+
+export async function getStudentQuizSubmissionsAction() {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const submissions = await prisma.quizSubmission.findMany({
+      where: { studentId: user.id },
+      include: { quiz: true },
+      orderBy: { completedAt: 'desc' },
+    });
+
+    return { success: true, submissions };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch student quiz history.' };
   }
 }
 
@@ -671,7 +743,8 @@ export async function getStudentFeeRecordsAction() {
 // RECORDED SESSIONS & WATCH ANALYTICS ACTIONS
 // ==========================================
 export async function createRecordedSessionAction(data: {
-  batchId: string;
+  batchId?: string | null;
+  isGlobal?: boolean;
   title: string;
   description?: string;
   videoUrl: string;
@@ -680,7 +753,8 @@ export async function createRecordedSessionAction(data: {
   try {
     const session = await prisma.recordedSession.create({
       data: {
-        batchId: data.batchId,
+        batchId: data.isGlobal ? null : (data.batchId || null),
+        isGlobal: !!data.isGlobal,
         title: data.title,
         description: data.description || null,
         videoUrl: data.videoUrl,
@@ -690,6 +764,44 @@ export async function createRecordedSessionAction(data: {
     return { success: true, session };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to create recorded session.' };
+  }
+}
+
+export async function updateRecordedSessionAction(data: {
+  id: string;
+  batchId?: string | null;
+  isGlobal?: boolean;
+  title: string;
+  description?: string;
+  videoUrl: string;
+  durationSeconds?: number;
+}) {
+  try {
+    const session = await prisma.recordedSession.update({
+      where: { id: data.id },
+      data: {
+        batchId: data.isGlobal ? null : (data.batchId || null),
+        isGlobal: !!data.isGlobal,
+        title: data.title,
+        description: data.description || null,
+        videoUrl: data.videoUrl,
+        durationSeconds: data.durationSeconds || 0,
+      },
+    });
+    return { success: true, session };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update recorded session.' };
+  }
+}
+
+export async function deleteRecordedSessionAction(id: string) {
+  try {
+    await prisma.recordedSession.delete({
+      where: { id },
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to delete recorded session.' };
   }
 }
 
@@ -704,7 +816,14 @@ export async function getRecordedSessionsAction(batchId?: string) {
     }
 
     const sessions = await prisma.recordedSession.findMany({
-      where: batchId ? { batchId } : undefined,
+      where: batchId
+        ? {
+            OR: [
+              { batchId },
+              { isGlobal: true },
+            ],
+          }
+        : undefined,
       include: {
         batch: true,
         watchLogs: { include: { student: true } },

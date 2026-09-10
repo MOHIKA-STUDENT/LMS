@@ -8,7 +8,7 @@ import {
   deleteMaterialAction,
 } from '@/app/actions/lms-actions';
 import { processAndValidateFileUpload } from '@/lib/utils/asset-shield';
-import { BookOpen, UploadCloud, FileText, Trash2, Download } from 'lucide-react';
+import { BookOpen, UploadCloud, FileText, Trash2, Download, Eye, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MaterialsPage() {
@@ -20,6 +20,9 @@ export default function MaterialsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // In-App Preview Modal
+  const [previewMaterial, setPreviewMaterial] = useState<any | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -58,7 +61,6 @@ export default function MaterialsPage() {
     setUploading(true);
 
     try {
-      // 1. Enforce 5MB Asset Shield & Compression
       const validation = await processAndValidateFileUpload(file);
       if (!validation.valid || !validation.processedFile) {
         toast.error(validation.error || 'File validation failed.');
@@ -68,7 +70,6 @@ export default function MaterialsPage() {
 
       const fileToUpload = validation.processedFile;
 
-      // 2. Upload using Cloudinary via Server Action
       const formData = new FormData();
       formData.append('batchId', isGlobal ? '' : selectedBatchId);
       formData.append('isGlobal', isGlobal ? 'true' : 'false');
@@ -79,7 +80,7 @@ export default function MaterialsPage() {
       const res = await uploadMaterialAction(formData);
       if (!res.success) throw new Error(res.error);
 
-      toast.success('Course material uploaded to Cloudinary successfully!');
+      toast.success('Course material uploaded successfully!');
       setTitle('');
       setDescription('');
       setFile(null);
@@ -93,6 +94,7 @@ export default function MaterialsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this study material?')) return;
     const res = await deleteMaterialAction(id);
     if (!res.success) {
       toast.error(res.error || 'Failed to delete material.');
@@ -209,8 +211,7 @@ export default function MaterialsPage() {
               if (fileType === 'pdf' && fileUrl.endsWith('.pdf')) {
                 fileUrl = `${fileUrl}.jpg`;
               }
-              const isViewable = ['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(fileType);
-              const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}`;
+              const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
 
               return (
                 <div key={m.id} className="py-4 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
@@ -227,6 +228,14 @@ export default function MaterialsPage() {
                   </div>
 
                   <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setPreviewMaterial({ ...m, resolvedUrl: fileUrl, gDocsUrl })}
+                      className="px-3 py-1.5 bg-indigo-600/20 text-indigo-600 dark:text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                      title="In-App Document Preview"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Preview</span>
+                    </button>
                     <a
                       href={fileUrl}
                       target="_blank"
@@ -237,17 +246,6 @@ export default function MaterialsPage() {
                       <Download className="w-4 h-4" />
                       <span>Open File</span>
                     </a>
-                    {isViewable && (
-                      <a
-                        href={gDocsUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-theme-main hover:bg-slate-300 dark:hover:bg-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-colors"
-                        title="Preview with Google Viewer"
-                      >
-                        <span>Preview</span>
-                      </a>
-                    )}
                     <button
                       onClick={() => handleDelete(m.id)}
                       className="p-2 text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
@@ -262,6 +260,55 @@ export default function MaterialsPage() {
           </div>
         )}
       </div>
+
+      {/* In-App Document Preview Modal */}
+      {previewMaterial && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between border-b border-theme pb-3">
+              <div>
+                <h3 className="font-bold text-theme-main text-lg">{previewMaterial.title}</h3>
+                <p className="text-xs text-theme-sub">{previewMaterial.description || 'Document Preview'}</p>
+              </div>
+              <button
+                onClick={() => setPreviewMaterial(null)}
+                className="p-2 text-theme-sub hover:text-theme-main bg-theme-card-sub rounded-xl border border-theme"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 bg-black/50 rounded-xl overflow-hidden min-h-[500px] border border-theme flex items-center justify-center relative">
+              {previewMaterial.resolvedUrl.endsWith('.jpg') || previewMaterial.resolvedUrl.endsWith('.png') ? (
+                <img
+                  src={previewMaterial.resolvedUrl}
+                  alt={previewMaterial.title}
+                  className="max-h-[600px] w-full object-contain mx-auto"
+                />
+              ) : (
+                <iframe
+                  src={previewMaterial.gDocsUrl}
+                  className="w-full h-[600px] border-0"
+                  title={previewMaterial.title}
+                />
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs text-theme-sub">Format: {previewMaterial.fileType.toUpperCase()}</span>
+              <a
+                href={previewMaterial.resolvedUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center space-x-2 shadow transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Open Direct Tab</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,9 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { generateQuizAction, generateQuizFromPPTAction, parseRawQuizTextAction } from '@/app/actions/ai-actions';
-import { getBatchesAction, getQuizzesAction, createManualQuizAction, getTeacherQuizAnalyticsAction } from '@/app/actions/lms-actions';
+import {
+  getBatchesAction,
+  getQuizzesAction,
+  createManualQuizAction,
+  updateQuizAction,
+  deleteQuizAction,
+  getTeacherQuizAnalyticsAction,
+} from '@/app/actions/lms-actions';
 import { CEFRLevel } from '@prisma/client';
-import { Sparkles, Bot, CheckCircle2, Plus, Eye, BookOpen, Send, Edit3, Globe, Trash2, FileCode, Presentation, FileText, UploadCloud } from 'lucide-react';
+import { Sparkles, Bot, CheckCircle2, Plus, Eye, BookOpen, Send, Edit3, Globe, Trash2, FileCode, Presentation, UploadCloud, X, Award, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function QuizGenPage() {
@@ -56,6 +63,15 @@ export default function QuizGenPage() {
   const [targetBatchId, setTargetBatchId] = useState<string>('');
   const [publishing, setPublishing] = useState(false);
 
+  // Modal States
+  const [previewPublishedQuiz, setPreviewPublishedQuiz] = useState<any | null>(null);
+  const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editTopic, setEditTopic] = useState('');
+  const [editCefr, setEditCefr] = useState<CEFRLevel>('B1');
+  const [editIsGlobal, setEditIsGlobal] = useState(false);
+  const [editBatchId, setEditBatchId] = useState('');
+
   const fetchData = async () => {
     setLoading(true);
     const bRes = await getBatchesAction();
@@ -99,7 +115,7 @@ export default function QuizGenPage() {
     }
 
     setGenerating(true);
-    toast.info('Gemini AI is crafting your quiz draft...', { id: 'ai-gen' });
+    toast.info('Gemini AI Master Professor is crafting your quiz draft...', { id: 'ai-gen' });
 
     try {
       const res = await generateQuizAction(userPrompt, cefrLevel);
@@ -221,15 +237,46 @@ export default function QuizGenPage() {
     setPublishing(false);
   };
 
+  const handleDeleteQuiz = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this published quiz?')) return;
+    const res = await deleteQuizAction(id);
+    if (res.success) {
+      toast.success('Quiz deleted.');
+      fetchData();
+    } else {
+      toast.error(res.error || 'Failed to delete quiz.');
+    }
+  };
+
+  const handleEditQuizSave = async () => {
+    if (!editingQuiz) return;
+    const res = await updateQuizAction({
+      id: editingQuiz.id,
+      batchId: editIsGlobal ? null : editBatchId,
+      isGlobal: editIsGlobal,
+      title: editTitle,
+      topic: editTopic,
+      cefrLevel: editCefr,
+    });
+
+    if (res.success) {
+      toast.success('Quiz updated successfully!');
+      setEditingQuiz(null);
+      fetchData();
+    } else {
+      toast.error(res.error || 'Failed to update quiz.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-theme-main flex items-center space-x-2">
           <Sparkles className="w-7 h-7 text-indigo-500" />
-          <span>Quiz Studio & AI Assistant</span>
+          <span>Quiz Studio & All-Rounder AI Master Professor</span>
         </h1>
         <p className="text-sm text-theme-sub mt-1">
-          Chat with Gemini AI, convert PPT slides into quizzes, parse Google Forms, build manual tests, and publish live
+          Chat with All-Rounder Master AI, convert PPT slides into quizzes, parse Google Forms, build manual tests, and inspect student score & attempt analytics
         </p>
       </div>
 
@@ -291,8 +338,8 @@ export default function QuizGenPage() {
               : 'text-theme-sub hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-theme-main'
           }`}
         >
-          <Eye className="w-4 h-4 text-cyan-500" />
-          <span>Student Scores</span>
+          <Award className="w-4 h-4 text-cyan-500" />
+          <span>Student Scores & Attempts</span>
         </button>
       </div>
 
@@ -301,10 +348,10 @@ export default function QuizGenPage() {
         <div className="bg-theme-card border border-theme rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
           <h2 className="text-base sm:text-lg font-bold text-theme-main flex items-center space-x-2">
             <Bot className="w-5 h-5 text-indigo-500 shrink-0" />
-            <span>Chat with Gemini AI to Craft Quizzes</span>
+            <span>Chat with All-Rounder AI Master Professor</span>
           </h2>
           <p className="text-xs text-theme-sub">
-            Describe any topic or grammar rule. Gemini will generate a draft for you to review & edit before publishing.
+            Describe any subject, topic, or grammar rule. Our All-Rounder Master Professor AI will generate a professional draft for you to review & edit before publishing.
           </p>
 
           <form onSubmit={handleChatGenerate} className="space-y-4 pt-2">
@@ -328,7 +375,7 @@ export default function QuizGenPage() {
               <input
                 type="text"
                 required
-                placeholder="Ask Gemini: e.g. Create a 5-question test on Third Conditionals..."
+                placeholder="Ask AI Professor: e.g. Create a test on Nouns & Pronouns or Business Writing..."
                 value={userPrompt}
                 onChange={(e) => setUserPrompt(e.target.value)}
                 className="w-full px-4 py-3 bg-theme-input border border-theme rounded-xl text-xs sm:text-sm text-theme-main focus:outline-none focus:border-indigo-500"
@@ -339,7 +386,7 @@ export default function QuizGenPage() {
                 className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all shrink-0 disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />
-                <span>{generating ? 'Generating...' : 'Generate Draft'}</span>
+                <span>{generating ? 'Prof. AI Thinking...' : 'Generate Quiz Draft'}</span>
               </button>
             </div>
           </form>
@@ -354,7 +401,7 @@ export default function QuizGenPage() {
             <span>Generate Quiz from PPT Slides & Lesson Notes</span>
           </h2>
           <p className="text-xs text-theme-sub">
-            Paste text from your PowerPoint slides, PDF study guides, or lesson notes below. Gemini AI will analyze the concepts and generate a quiz matching your PPT!
+            Upload or paste text from PowerPoint slides, PDF study guides, or lesson notes below. AI will analyze the concepts and generate a custom quiz matching your slides!
           </p>
 
           <form onSubmit={handleGenerateFromPPT} className="space-y-4 pt-2">
@@ -466,7 +513,7 @@ export default function QuizGenPage() {
         </div>
       )}
 
-      {/* INTERACTIVE DRAFT PREVIEW & EDITOR (Always visible when draft exists) */}
+      {/* INTERACTIVE DRAFT PREVIEW & EDITOR */}
       {draftQuiz && (
         <div className="bg-theme-card border-2 border-indigo-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-6 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme pb-4">
@@ -485,7 +532,6 @@ export default function QuizGenPage() {
             </button>
           </div>
 
-          {/* Draft General Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-theme-card-sub p-4 rounded-xl border border-theme">
             <div>
               <label className="block text-[10px] font-semibold text-theme-sub uppercase mb-1">Quiz Title</label>
@@ -508,7 +554,6 @@ export default function QuizGenPage() {
             </div>
           </div>
 
-          {/* Editable Questions List */}
           <div className="space-y-4">
             <h3 className="font-bold text-theme-main text-sm">Questions ({draftQuiz.questions.length})</h3>
 
@@ -527,7 +572,6 @@ export default function QuizGenPage() {
                   </button>
                 </div>
 
-                {/* Question Textarea for full wrapping on mobile */}
                 <div>
                   <label className="block text-[10px] font-semibold text-theme-sub uppercase mb-1">Question Text</label>
                   <textarea
@@ -542,7 +586,6 @@ export default function QuizGenPage() {
                   />
                 </div>
 
-                {/* Options Textareas */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   {q.options.map((opt: string, optIdx: number) => (
                     <div key={optIdx} className="space-y-1">
@@ -620,7 +663,6 @@ export default function QuizGenPage() {
             </button>
           </div>
 
-          {/* Publishing Controls */}
           <div className="pt-4 border-t border-theme flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <label className="flex items-center space-x-2 text-xs text-theme-main cursor-pointer">
@@ -676,7 +718,7 @@ export default function QuizGenPage() {
       <div className="bg-theme-card border border-theme rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
         <h2 className="text-base sm:text-lg font-bold text-theme-main flex items-center space-x-2">
           <BookOpen className="w-5 h-5 text-indigo-500 shrink-0" />
-          <span>Published Batch Quizzes</span>
+          <span>Published Batch Quizzes & Preview Studio</span>
         </h2>
 
         {loading ? (
@@ -686,53 +728,253 @@ export default function QuizGenPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {quizzes.map((q) => (
-              <div key={q.id} className="p-4 bg-theme-card-sub border border-theme rounded-xl space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30">
-                    {q.cefrLevel}
-                  </span>
-                  <span className="text-[10px] text-theme-sub font-mono">
-                    {q.isGlobal ? 'Global (All Batches)' : q.batch?.name || 'Specific Batch'}
-                  </span>
+              <div key={q.id} className="p-4 bg-theme-card-sub border border-theme rounded-xl space-y-3 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30">
+                      {q.cefrLevel}
+                    </span>
+                    <span className="text-[10px] text-theme-sub font-mono">
+                      {q.isGlobal ? 'Global (All Batches)' : q.batch?.name || 'Specific Batch'}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-theme-main text-sm leading-snug">{q.title}</h3>
+                  <p className="text-xs text-theme-sub mt-0.5">Topic: {q.topic} • {(q.questions as any[])?.length || 0} Questions</p>
                 </div>
-                <h3 className="font-bold text-theme-main text-sm leading-snug">{q.title}</h3>
-                <p className="text-xs text-theme-sub">Topic: {q.topic} • {(q.questions as any[])?.length || 0} Questions</p>
+
+                <div className="flex items-center justify-end space-x-2 border-t border-theme pt-3">
+                  <button
+                    onClick={() => setPreviewPublishedQuiz(q)}
+                    className="px-3 py-1.5 bg-indigo-600/20 text-indigo-600 dark:text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Preview Quiz</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingQuiz(q);
+                      setEditTitle(q.title);
+                      setEditTopic(q.topic);
+                      setEditCefr(q.cefrLevel);
+                      setEditIsGlobal(q.isGlobal);
+                      setEditBatchId(q.batchId || '');
+                    }}
+                    className="p-1.5 text-indigo-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                    title="Edit Quiz Details"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteQuiz(q.id)}
+                    className="p-1.5 text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                    title="Delete Quiz"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* STUDENT SCORES & RESULTS TAB */}
+      {/* STUDENT SCORES & ATTEMPTS ANALYTICS TAB */}
       {activeTab === 'analytics' && (
-        <div className="bg-theme-card border border-theme rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
-          <h2 className="text-base sm:text-lg font-bold text-theme-main flex items-center space-x-2">
-            <Eye className="w-5 h-5 text-cyan-500 shrink-0" />
-            <span>Student Quiz Performance Results</span>
-          </h2>
+        <div className="bg-theme-card border border-theme rounded-2xl p-4 sm:p-6 shadow-xl space-y-6">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-theme-main flex items-center space-x-2">
+              <Award className="w-5 h-5 text-cyan-500 shrink-0" />
+              <span>Detailed Student Quiz Attempts & Roster Breakdown</span>
+            </h2>
+            <p className="text-xs text-theme-sub mt-0.5">Track student attempt counts (Attempt #1, Attempt #2), highest scores, and date of completion</p>
+          </div>
 
           {analyticsSubmissions.length === 0 ? (
-            <p className="text-center py-6 text-xs sm:text-sm text-theme-sub">No quiz submissions recorded yet.</p>
+            <p className="text-center py-6 text-xs sm:text-sm text-theme-sub">No student quiz attempts recorded yet.</p>
           ) : (
-            <div className="divide-y divide-theme border border-theme rounded-xl overflow-hidden">
+            <div className="divide-y divide-theme border border-theme rounded-xl overflow-hidden shadow-sm">
               {analyticsSubmissions.map((sub) => (
-                <div key={sub.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-theme-card hover:bg-theme-card-sub transition-colors">
-                  <div>
-                    <h4 className="font-bold text-theme-main text-sm">{sub.student?.fullName || sub.student?.email}</h4>
-                    <p className="text-xs text-theme-sub">{sub.quiz?.title} • {sub.student?.batch?.name || 'No Batch'}</p>
+                <div key={sub.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-theme-card hover:bg-theme-card-sub transition-colors">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-bold text-theme-main text-sm">{sub.student?.fullName || sub.student?.email}</h4>
+                      <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 rounded text-[10px] font-mono font-bold">
+                        Attempt #{sub.attemptNumber || 1}
+                      </span>
+                    </div>
+                    <p className="text-xs text-theme-sub">
+                      Quiz: <span className="font-semibold text-theme-main">{sub.quiz?.title}</span> • Batch: {sub.student?.batch?.name || 'No Batch'}
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/30">
-                      Score: {sub.score} pts
+
+                  <div className="flex items-center space-x-3 self-start sm:self-auto">
+                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/30">
+                      Score: {sub.score} / {sub.totalQuestions || 5} pts ({Math.round((sub.score / (sub.totalQuestions || 5)) * 100)}%)
                     </span>
                     <span className="text-[10px] text-theme-sub font-mono">
-                      {new Date(sub.completedAt).toLocaleDateString()}
+                      {new Date(sub.completedAt).toLocaleString()}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* PREVIEW PUBLISHED QUIZ MODAL */}
+      {previewPublishedQuiz && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between border-b border-theme pb-3">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30">
+                  {previewPublishedQuiz.cefrLevel}
+                </span>
+                <h3 className="font-bold text-theme-main text-lg mt-1">{previewPublishedQuiz.title}</h3>
+                <p className="text-xs text-theme-sub">Topic: {previewPublishedQuiz.topic}</p>
+              </div>
+              <button
+                onClick={() => setPreviewPublishedQuiz(null)}
+                className="p-2 text-theme-sub hover:text-theme-main bg-theme-card-sub rounded-xl border border-theme"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              {((previewPublishedQuiz.questions as any[]) || []).map((q: any, idx: number) => (
+                <div key={idx} className="p-4 bg-theme-card-sub border border-theme rounded-xl space-y-3">
+                  <h4 className="font-bold text-theme-main text-sm flex items-start space-x-2">
+                    <span className="text-indigo-500">Q{idx + 1}.</span>
+                    <span>{q.question}</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {(q.options || []).map((opt: string, optIdx: number) => {
+                      const isCorrect = optIdx === q.correctAnswerIndex;
+                      return (
+                        <div
+                          key={optIdx}
+                          className={`p-2.5 rounded-xl border text-xs leading-relaxed ${
+                            isCorrect
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-bold'
+                              : 'bg-theme-input border-theme text-theme-sub'
+                          }`}
+                        >
+                          <span className="font-mono font-bold mr-1">{String.fromCharCode(65 + optIdx)}:</span> {opt}
+                          {isCorrect && <span className="ml-2 text-[10px] text-emerald-500 uppercase font-mono">(Correct)</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {q.explanation && (
+                    <p className="text-xs text-indigo-600 dark:text-indigo-300 bg-indigo-500/10 p-2.5 rounded-lg border border-indigo-500/20 italic">
+                      <span className="font-bold not-italic">Explanation: </span>{q.explanation}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-theme">
+              <button
+                onClick={() => setPreviewPublishedQuiz(null)}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PUBLISHED QUIZ MODAL */}
+      {editingQuiz && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-2xl w-full max-w-lg space-y-4">
+            <h3 className="text-lg font-bold text-theme-main">Edit Published Quiz Details</h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Quiz Title</label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-2 bg-theme-input border border-theme rounded-xl text-theme-main text-sm font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Topic / Category</label>
+                <input
+                  type="text"
+                  value={editTopic}
+                  onChange={(e) => setEditTopic(e.target.value)}
+                  className="w-full px-4 py-2 bg-theme-input border border-theme rounded-xl text-theme-main text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">CEFR Level</label>
+                <select
+                  value={editCefr}
+                  onChange={(e) => setEditCefr(e.target.value as CEFRLevel)}
+                  className="w-full px-4 py-2 bg-theme-input border border-theme rounded-xl text-theme-main text-sm font-semibold"
+                >
+                  <option value="A1">A1 - Beginner</option>
+                  <option value="A2">A2 - Elementary</option>
+                  <option value="B1">B1 - Intermediate</option>
+                  <option value="B2">B2 - Upper Intermediate</option>
+                  <option value="C1">C1 - Advanced</option>
+                  <option value="C2">C2 - Mastery</option>
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-3 pt-2">
+                <label className="flex items-center space-x-2 text-xs text-theme-main cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editIsGlobal}
+                    onChange={(e) => setEditIsGlobal(e.target.checked)}
+                    className="rounded border-theme text-indigo-600"
+                  />
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-300">All Batches (Global)</span>
+                </label>
+
+                {!editIsGlobal && (
+                  <select
+                    value={editBatchId}
+                    onChange={(e) => setEditBatchId(e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-theme-input border border-theme rounded-xl text-theme-main text-xs"
+                  >
+                    {batches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.cefrLevel})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-4 border-t border-theme">
+              <button
+                onClick={() => setEditingQuiz(null)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-theme-main rounded-xl text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditQuizSave}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

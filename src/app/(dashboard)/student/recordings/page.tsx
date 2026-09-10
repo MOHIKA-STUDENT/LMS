@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getRecordedSessionsAction, logVideoWatchProgressAction, getStudentProfileAction } from '@/app/actions/lms-actions';
+import { formatEmbedVideoUrl, getYouTubeThumbnail, isYouTubeOrVimeo } from '@/lib/utils/video-helper';
 import { Video, Play, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,7 +43,7 @@ export default function StudentRecordingsPage() {
           <Video className="w-7 h-7 text-indigo-500" />
           <span>Recorded Class Sessions</span>
         </h1>
-        <p className="text-sm text-theme-sub mt-1">Watch recorded live classes for your batch and catch up on lesson material anytime</p>
+        <p className="text-sm text-theme-sub mt-1">Watch recorded live classes and lecture videos for your batch anytime</p>
       </div>
 
       {loading ? (
@@ -53,16 +54,16 @@ export default function StudentRecordingsPage() {
             <h2 className="text-lg font-bold text-theme-main">{activeSession.title}</h2>
             <button
               onClick={() => setActiveSession(null)}
-              className="text-xs text-theme-sub hover:text-theme-main bg-theme-card-sub border border-theme px-3 py-1.5 rounded-lg"
+              className="text-xs font-semibold text-theme-sub hover:text-theme-main bg-theme-card-sub border border-theme px-3 py-1.5 rounded-lg"
             >
               Close Video
             </button>
           </div>
 
-          <div className="aspect-video bg-black rounded-xl overflow-hidden relative flex items-center justify-center border border-theme">
-            {activeSession.videoUrl.includes('youtube') || activeSession.videoUrl.includes('vimeo') ? (
+          <div className="aspect-video bg-black rounded-xl overflow-hidden relative flex items-center justify-center border border-theme shadow-2xl">
+            {isYouTubeOrVimeo(activeSession.videoUrl) ? (
               <iframe
-                src={activeSession.videoUrl}
+                src={formatEmbedVideoUrl(activeSession.videoUrl)}
                 className="w-full h-full"
                 allowFullScreen
                 title={activeSession.title}
@@ -95,34 +96,59 @@ export default function StudentRecordingsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className="bg-theme-card border border-theme hover:border-indigo-500/50 rounded-2xl p-6 shadow-xl transition-all flex flex-col justify-between space-y-4"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="px-2.5 py-0.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 rounded text-xs font-mono font-bold">
-                    {session.batch?.name || 'Batch'}
-                  </span>
-                  <span className="text-xs text-theme-sub font-mono">
-                    {Math.round(session.durationSeconds / 60)} mins
-                  </span>
+          {sessions.map((session) => {
+            const isEmbed = isYouTubeOrVimeo(session.videoUrl);
+            const embedUrl = formatEmbedVideoUrl(session.videoUrl);
+            const ytThumbnail = getYouTubeThumbnail(session.videoUrl);
+
+            return (
+              <div
+                key={session.id}
+                className="bg-theme-card border border-theme hover:border-indigo-500/50 rounded-2xl p-6 shadow-xl transition-all flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 rounded text-xs font-mono font-bold">
+                      {session.batch?.name || (session.isGlobal ? 'All Batches (Global)' : 'Batch Class')}
+                    </span>
+                    <span className="text-xs text-theme-sub font-mono">
+                      {Math.round(session.durationSeconds / 60)} mins
+                    </span>
+                  </div>
+
+                  <h3 className="font-bold text-theme-main text-lg">{session.title}</h3>
+                  {session.description && <p className="text-xs text-theme-sub">{session.description}</p>}
+
+                  {/* Embedded Video Card Player */}
+                  <div className="aspect-video bg-black rounded-xl overflow-hidden relative border border-theme shadow-inner">
+                    {isEmbed ? (
+                      <iframe
+                        src={embedUrl}
+                        className="w-full h-full"
+                        allowFullScreen
+                        title={session.title}
+                      />
+                    ) : (
+                      <video
+                        src={session.videoUrl}
+                        controls
+                        className="w-full h-full object-contain"
+                        poster={ytThumbnail || undefined}
+                      />
+                    )}
+                  </div>
                 </div>
 
-                <h3 className="font-bold text-theme-main text-lg mb-1">{session.title}</h3>
-                {session.description && <p className="text-xs text-theme-sub">{session.description}</p>}
+                <button
+                  onClick={() => handleStartWatch(session)}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all"
+                >
+                  <Play className="w-4 h-4 fill-white" />
+                  <span>Watch Full Class Recording</span>
+                </button>
               </div>
-
-              <button
-                onClick={() => handleStartWatch(session)}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all"
-              >
-                <Play className="w-4 h-4 fill-white" />
-                <span>Watch Class Recording</span>
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
