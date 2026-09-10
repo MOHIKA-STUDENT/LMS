@@ -271,10 +271,9 @@ export default function MaterialsPage() {
             {materials.map((m) => {
               const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'Unknown Batch');
               const fileType = (m.fileType || 'file').toLowerCase();
-              let fileUrl = m.fileUrl || '#';
-              if (fileType === 'pdf' && fileUrl.endsWith('.pdf')) {
-                fileUrl = `${fileUrl}.jpg`;
-              }
+              const fileUrl = (m.fileUrl || '#').replace(/\.pdf\.jpg$/i, '.pdf').replace(/\.pdf\.pdf$/i, '.pdf');
+              const isPdf = fileType === 'pdf' || fileUrl.toLowerCase().endsWith('.pdf');
+              const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType);
               const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
 
               return (
@@ -293,7 +292,7 @@ export default function MaterialsPage() {
 
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => setPreviewMaterial({ ...m, resolvedUrl: fileUrl, gDocsUrl })}
+                      onClick={() => setPreviewMaterial({ ...m, resolvedUrl: fileUrl, gDocsUrl, isPdf, isImage })}
                       className="px-3 py-1.5 bg-indigo-600/20 text-indigo-600 dark:text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
                       title="In-App Document Preview"
                     >
@@ -452,7 +451,7 @@ export default function MaterialsPage() {
             </div>
 
             <div className="flex-1 bg-black/50 rounded-xl overflow-hidden min-h-[500px] border border-theme flex items-center justify-center relative">
-              {previewMaterial.resolvedUrl.endsWith('.jpg') || previewMaterial.resolvedUrl.endsWith('.png') ? (
+              {previewMaterial.isImage ? (
                 <img
                   src={previewMaterial.resolvedUrl}
                   alt={previewMaterial.title}

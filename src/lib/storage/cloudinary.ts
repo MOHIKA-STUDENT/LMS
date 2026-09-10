@@ -40,10 +40,7 @@ export async function uploadToCloudinary(
               error: error?.message || 'Failed to upload to Cloudinary CDN.',
             });
           } else {
-            let finalUrl = result.secure_url;
-            if (ext === 'pdf' && finalUrl.endsWith('.pdf')) {
-              finalUrl = `${finalUrl}.jpg`;
-            }
+            const finalUrl = result.secure_url;
             resolve({
               success: true,
               url: finalUrl,

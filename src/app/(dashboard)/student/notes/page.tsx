@@ -46,10 +46,9 @@ export default function StudentNotesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {materials.map((m) => {
             const fileType = (m.fileType || 'file').toLowerCase();
-            let fileUrl = m.fileUrl || '#';
-            if (fileType === 'pdf' && fileUrl.endsWith('.pdf')) {
-              fileUrl = `${fileUrl}.jpg`;
-            }
+            const fileUrl = (m.fileUrl || '#').replace(/\.pdf\.jpg$/i, '.pdf').replace(/\.pdf\.pdf$/i, '.pdf');
+            const isPdf = fileType === 'pdf' || fileUrl.toLowerCase().endsWith('.pdf');
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType);
             const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
 
             return (
@@ -73,7 +72,7 @@ export default function StudentNotesPage() {
 
                 <div className="flex flex-col gap-2">
                   <button
-                    onClick={() => setPreviewMaterial({ ...m, resolvedUrl: fileUrl, gDocsUrl })}
+                    onClick={() => setPreviewMaterial({ ...m, resolvedUrl: fileUrl, gDocsUrl, isImage, isPdf })}
                     className="w-full py-2 bg-indigo-600/20 text-indigo-600 dark:text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 transition-all"
                   >
                     <Eye className="w-4 h-4" />
@@ -113,7 +112,7 @@ export default function StudentNotesPage() {
             </div>
 
             <div className="flex-1 bg-black/50 rounded-xl overflow-hidden min-h-[500px] border border-theme flex items-center justify-center relative">
-              {previewMaterial.resolvedUrl.endsWith('.jpg') || previewMaterial.resolvedUrl.endsWith('.png') ? (
+              {previewMaterial.isImage ? (
                 <img
                   src={previewMaterial.resolvedUrl}
                   alt={previewMaterial.title}

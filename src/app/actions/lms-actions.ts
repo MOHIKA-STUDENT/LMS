@@ -290,7 +290,13 @@ export async function getMaterialsAction(batchId?: string) {
       include: { batch: true },
       orderBy: { createdAt: 'desc' },
     });
-    return { success: true, materials };
+
+    const sanitizedMaterials = materials.map((m) => ({
+      ...m,
+      fileUrl: m.fileUrl ? m.fileUrl.replace(/\.pdf\.jpg$/i, '.pdf').replace(/\.pdf\.pdf$/i, '.pdf') : m.fileUrl,
+    }));
+
+    return { success: true, materials: sanitizedMaterials };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to fetch materials.' };
   }
@@ -401,7 +407,13 @@ export async function getSubmissionsAction() {
       include: { student: true, assignment: true },
       orderBy: { createdAt: 'desc' },
     });
-    return { success: true, submissions };
+
+    const sanitizedSubmissions = submissions.map((sub) => ({
+      ...sub,
+      fileUrl: sub.fileUrl ? sub.fileUrl.replace(/\.pdf\.jpg$/i, '.pdf').replace(/\.pdf\.pdf$/i, '.pdf') : sub.fileUrl,
+    }));
+
+    return { success: true, submissions: sanitizedSubmissions };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to fetch submissions.' };
   }
