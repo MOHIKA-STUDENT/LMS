@@ -14,7 +14,7 @@ export default function Navbar({ profile }: NavbarProps) {
   const pathname = usePathname();
   const { user, isLoaded } = useUser();
 
-  const role = (user?.publicMetadata as any)?.role || profile?.role || 'STUDENT';
+  const role = (user?.publicMetadata as any)?.role || (user?.unsafeMetadata as any)?.role || profile?.role || 'STUDENT';
   const isTeacher = role === 'TEACHER';
 
   const teacherLinks = [

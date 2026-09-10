@@ -92,6 +92,7 @@ export default function RegisterPage() {
 
         {(role === 'STUDENT' || passcodeVerified) && (
           <SignUp
+            routing="hash"
             unsafeMetadata={{
               role: role,
             }}

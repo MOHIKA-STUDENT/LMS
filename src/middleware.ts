@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 const isPublicRoute = createRouteMatcher([
@@ -13,6 +13,10 @@ const isAdminRoute = createRouteMatcher([
   '/admin(.*)',
 ]);
 
+const isStudentRoute = createRouteMatcher([
+  '/student(.*)',
+]);
+
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
 
@@ -22,16 +26,39 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   if (userId) {
-    const role = (sessionClaims?.metadata as any)?.role || 'STUDENT';
+    // 1. Check session claims for role first
+    let role =
+      (sessionClaims?.metadata as any)?.role ||
+      (sessionClaims?.publicMetadata as any)?.role ||
+      (sessionClaims?.unsafeMetadata as any)?.role ||
+      (sessionClaims as any)?.role;
+
+    // 2. If role not found in JWT claims, fetch real-time metadata from Clerk user object
+    if (!role) {
+      try {
+        const client = await clerkClient();
+        const user = await client.users.getUser(userId);
+        role = (user.publicMetadata as any)?.role || (user.unsafeMetadata as any)?.role;
+      } catch (err) {
+        console.warn('Middleware role fetch notice:', err);
+      }
+    }
+
+    const userRole = role === 'TEACHER' ? 'TEACHER' : 'STUDENT';
 
     // Block non-teachers from reaching /admin
-    if (isAdminRoute(req) && role !== 'TEACHER') {
+    if (isAdminRoute(req) && userRole !== 'TEACHER') {
       return NextResponse.redirect(new URL('/student/timeline', req.url));
     }
 
-    // Auto-redirect from login/register if already signed in
+    // Block non-students from reaching /student
+    if (isStudentRoute(req) && userRole === 'TEACHER') {
+      return NextResponse.redirect(new URL('/admin/batches', req.url));
+    }
+
+    // Auto-redirect from login/register/home if already signed in
     if (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/register' || req.nextUrl.pathname === '/') {
-      if (role === 'TEACHER') {
+      if (userRole === 'TEACHER') {
         return NextResponse.redirect(new URL('/admin/batches', req.url));
       } else {
         return NextResponse.redirect(new URL('/student/timeline', req.url));

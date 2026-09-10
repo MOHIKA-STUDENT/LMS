@@ -1,4 +1,4 @@
-import { currentUser } from '@clerk/nextjs/server';
+import { currentUser, clerkClient } from '@clerk/nextjs/server';
 import Navbar from '@/components/Navbar';
 import OfflineBanner from '@/components/OfflineBanner';
 import { prisma } from '@/lib/db/prisma';
@@ -18,19 +18,33 @@ export default async function DashboardLayout({
         include: { batch: true },
       });
 
+      const metadataRole = (user.publicMetadata as any)?.role || (user.unsafeMetadata as any)?.role;
+      const targetRole = metadataRole === 'TEACHER' ? 'TEACHER' : 'STUDENT';
+
       // Auto-create profile in Prisma if missing
       if (!profile && user.primaryEmailAddress) {
-        const userRole = (user.publicMetadata as any)?.role === 'TEACHER' ? 'TEACHER' : 'STUDENT';
         profile = await prisma.profile.create({
           data: {
             id: user.id,
-            fullName: user.fullName || user.primaryEmailAddress.emailAddress,
+            fullName: user.fullName || user.firstName || user.primaryEmailAddress.emailAddress,
             email: user.primaryEmailAddress.emailAddress,
-            role: userRole,
+            role: targetRole,
             isActive: true,
           },
           include: { batch: true },
         });
+      }
+
+      // Sync publicMetadata in Clerk if missing or mismatched
+      if (profile && (user.publicMetadata as any)?.role !== profile.role) {
+        try {
+          const client = await clerkClient();
+          await client.users.updateUserMetadata(user.id, {
+            publicMetadata: { role: profile.role },
+          });
+        } catch (mErr) {
+          console.warn('Could not sync Clerk publicMetadata:', mErr);
+        }
       }
     } catch (err) {
       console.warn('Prisma layout query notice:', err);
