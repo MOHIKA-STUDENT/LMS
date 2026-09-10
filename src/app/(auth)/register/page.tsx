@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Batch } from '@/types/database';
-import { BookOpen, UserPlus, Lock, Mail, User, Shield, Users } from 'lucide-react';
+import { BookOpen, UserPlus, Lock, Mail, User, Shield, Users, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function RegisterPage() {
@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'STUDENT' | 'TEACHER'>('STUDENT');
+  const [teacherPasscode, setTeacherPasscode] = useState('');
   const [batchId, setBatchId] = useState('');
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,14 +24,30 @@ export default function RegisterPage() {
   useEffect(() => {
     // Fetch available batches for student assignment dropdown
     const fetchBatches = async () => {
-      const { data } = await supabase.from('batches').select('*').order('name');
-      if (data) setBatches(data);
+      try {
+        const { data } = await supabase.from('batches').select('*').order('name');
+        if (data) setBatches(data);
+      } catch (err) {
+        console.warn('Batch fetch error:', err);
+      }
     };
     fetchBatches();
   }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Secure Teacher Validation Check
+    if (role === 'TEACHER') {
+      const requiredCode = process.env.NEXT_PUBLIC_TEACHER_SIGNUP_CODE || 'TEACHER2026';
+      if (teacherPasscode.trim() !== requiredCode) {
+        toast.error('Invalid Teacher Security Passcode! Students cannot register as Teacher.', {
+          description: 'Please ask your academy administrator for the teacher passcode or select Student role.',
+        });
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -47,14 +64,18 @@ export default function RegisterPage() {
       });
 
       if (error) {
-        toast.error(error.message || 'Registration failed.');
+        if (error.status === 429) {
+          toast.error('Rate limit reached. Please wait 1 minute before trying again.');
+        } else {
+          toast.error(error.message || 'Registration failed.');
+        }
         setLoading(false);
         return;
       }
 
       if (data.user) {
-        // Explicitly create/update profile to guarantee role persistence
-        await supabase.from('profiles').upsert({
+        // Explicitly write profile row to guarantee role persistence
+        const { error: profileError } = await supabase.from('profiles').upsert({
           id: data.user.id,
           full_name: fullName,
           email: email,
@@ -64,7 +85,12 @@ export default function RegisterPage() {
           is_active: true,
         });
 
-        toast.success('Account created successfully!');
+        if (profileError) {
+          console.warn('Profile upsert warning:', profileError);
+        }
+
+        toast.success(`Account created successfully as ${role}!`);
+        
         if (role === 'TEACHER') {
           router.push('/admin/batches');
         } else {
@@ -137,7 +163,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Role</label>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Account Role</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -167,7 +193,28 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {role === 'STUDENT' && (
+          {/* Teacher Passcode Security Field */}
+          {role === 'TEACHER' && (
+            <div className="p-4 bg-purple-950/40 border border-purple-800/50 rounded-xl space-y-2">
+              <label className="block text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center space-x-1">
+                <KeyRound className="w-4 h-4 text-purple-400" />
+                <span>Teacher Security Passcode</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={teacherPasscode}
+                onChange={(e) => setTeacherPasscode(e.target.value)}
+                placeholder="Enter academy secret passcode (TEACHER2026)"
+                className="w-full px-4 py-2.5 bg-slate-900 border border-purple-700/60 rounded-xl text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-400 text-sm font-mono"
+              />
+              <p className="text-[11px] text-purple-300/80">
+                🔒 Protection enabled: Students cannot register as Teacher without this secret passcode.
+              </p>
+            </div>
+          )}
+
+          {role === 'STUDENT' && batches.length > 0 && (
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Assign Batch (Optional)</label>
               <select
@@ -191,7 +238,7 @@ export default function RegisterPage() {
             className="w-full py-3 mt-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
           >
             <UserPlus className="w-5 h-5" />
-            <span>{loading ? 'Registering...' : 'Register'}</span>
+            <span>{loading ? 'Registering...' : `Register as ${role}`}</span>
           </button>
         </form>
 

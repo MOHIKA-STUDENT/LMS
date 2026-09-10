@@ -129,9 +129,9 @@ CREATE POLICY "Teachers can manage all batches"
   ON batches FOR ALL
   USING (is_teacher());
 
-CREATE POLICY "Students can view their assigned batch"
+CREATE POLICY "Authenticated users can view batch info"
   ON batches FOR SELECT
-  USING (id = get_user_batch_id());
+  USING (auth.uid() IS NOT NULL);
 
 -- ------------------------------------------
 -- 2. PROFILES POLICIES

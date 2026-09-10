@@ -17,12 +17,27 @@ export default async function DashboardLayout({
   let profile: Profile | null = null;
 
   if (user) {
-    const { data } = await supabase
+    // 1. Fetch profile first
+    const { data: pData } = await supabase
       .from('profiles')
-      .select('*, batches(*)')
+      .select('*')
       .eq('id', user.id)
       .single();
-    profile = data as Profile | null;
+
+    if (pData) {
+      profile = pData as Profile;
+      // 2. Fetch assigned batch if present
+      if (pData.batch_id) {
+        const { data: bData } = await supabase
+          .from('batches')
+          .select('*')
+          .eq('id', pData.batch_id)
+          .single();
+        if (bData && profile) {
+          profile.batches = bData;
+        }
+      }
+    }
   }
 
   return (
