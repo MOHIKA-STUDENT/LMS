@@ -43,12 +43,9 @@ export default function StudentNotesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {materials.map((m) => {
             const fileType = (m.fileType || 'file').toLowerCase();
-            let formattedUrl = m.fileUrl || '#';
-            if (fileType && !formattedUrl.toLowerCase().endsWith(`.${fileType}`)) {
-              formattedUrl = `${formattedUrl}.${fileType}`;
-            }
-            const isPdf = fileType === 'pdf' || formattedUrl.toLowerCase().endsWith('.pdf');
-            const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(formattedUrl)}`;
+            const fileUrl = m.fileUrl || '#';
+            const isViewable = ['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(fileType);
+            const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}`;
 
             return (
               <div key={m.id} className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
@@ -71,7 +68,7 @@ export default function StudentNotesPage() {
 
                 <div className="flex flex-col gap-2">
                   <a
-                    href={formattedUrl}
+                    href={fileUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all"
@@ -79,7 +76,7 @@ export default function StudentNotesPage() {
                     <Download className="w-4 h-4" />
                     <span>Open / Download Material</span>
                   </a>
-                  {isPdf && (
+                  {isViewable && (
                     <a
                       href={gDocsUrl}
                       target="_blank"

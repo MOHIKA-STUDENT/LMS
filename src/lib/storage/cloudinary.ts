@@ -24,7 +24,7 @@ export async function uploadToCloudinary(
   try {
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
     const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const publicId = `${Date.now()}_${nameWithoutExt}`;
+    const publicId = ext ? `${Date.now()}_${nameWithoutExt}.${ext}` : `${Date.now()}_${nameWithoutExt}`;
 
     return new Promise((resolve) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -41,13 +41,9 @@ export async function uploadToCloudinary(
               error: error?.message || 'Failed to upload to Cloudinary CDN.',
             });
           } else {
-            let finalUrl = result.secure_url;
-            if (ext && !finalUrl.toLowerCase().endsWith(`.${ext}`)) {
-              finalUrl = `${finalUrl}.${ext}`;
-            }
             resolve({
               success: true,
-              url: finalUrl,
+              url: result.secure_url,
               bytes: result.bytes,
               format: result.format || ext,
             });

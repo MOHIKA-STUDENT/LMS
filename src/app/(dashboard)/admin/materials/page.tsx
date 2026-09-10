@@ -205,12 +205,9 @@ export default function MaterialsPage() {
             {materials.map((m) => {
               const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'Unknown Batch');
               const fileType = (m.fileType || 'file').toLowerCase();
-              let formattedUrl = m.fileUrl || '#';
-              if (fileType && !formattedUrl.toLowerCase().endsWith(`.${fileType}`)) {
-                formattedUrl = `${formattedUrl}.${fileType}`;
-              }
-              const isPdf = fileType === 'pdf' || formattedUrl.toLowerCase().endsWith('.pdf');
-              const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(formattedUrl)}`;
+              const fileUrl = m.fileUrl || '#';
+              const isViewable = ['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(fileType);
+              const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}`;
 
               return (
                 <div key={m.id} className="py-4 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
@@ -228,7 +225,7 @@ export default function MaterialsPage() {
 
                   <div className="flex items-center space-x-2">
                     <a
-                      href={formattedUrl}
+                      href={fileUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow transition-colors"
@@ -237,7 +234,7 @@ export default function MaterialsPage() {
                       <Download className="w-4 h-4" />
                       <span>Open File</span>
                     </a>
-                    {isPdf && (
+                    {isViewable && (
                       <a
                         href={gDocsUrl}
                         target="_blank"
@@ -245,7 +242,7 @@ export default function MaterialsPage() {
                         className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-theme-main hover:bg-slate-300 dark:hover:bg-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-colors"
                         title="Preview with Google Viewer"
                       >
-                        <span>Preview PDF</span>
+                        <span>Preview</span>
                       </a>
                     )}
                     <button
