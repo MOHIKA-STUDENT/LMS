@@ -27,6 +27,7 @@ model Profile {
   email       String   @unique
   role        Role     @default(STUDENT)
   batchId     String?
+  avatarUrl   String?
   points      Int      @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

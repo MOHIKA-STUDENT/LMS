@@ -666,4 +666,30 @@ export async function updateProfileNameAction(fullName: string) {
   }
 }
 
+export async function updateProfileAvatarAction(formData: FormData) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const file = formData.get('avatar') as File;
+    if (!file) return { success: false, error: 'No avatar image uploaded.' };
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploadRes = await uploadToCloudinary(buffer, file.name, `avatars/${user.id}`);
+
+    if (!uploadRes.success || !uploadRes.url) {
+      return { success: false, error: uploadRes.error || 'Failed to upload avatar image.' };
+    }
+
+    const profile = await prisma.profile.update({
+      where: { id: user.id },
+      data: { avatarUrl: uploadRes.url },
+    });
+
+    return { success: true, avatarUrl: uploadRes.url, profile };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update avatar.' };
+  }
+}
+
 

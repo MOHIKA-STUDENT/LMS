@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton, useUser } from '@clerk/nextjs';
 import { Profile } from '@/types/database';
-import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LayoutDashboard, CheckSquare, Settings, Video, CreditCard, UserCheck } from 'lucide-react';
+import { useTheme } from '@/components/ThemeProvider';
+import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LayoutDashboard, CheckSquare, Settings, Video, CreditCard, UserCheck, Sun, Moon } from 'lucide-react';
 
 interface NavbarProps {
   profile?: Profile | null;
@@ -13,9 +14,16 @@ interface NavbarProps {
 export default function Navbar({ profile }: NavbarProps) {
   const pathname = usePathname();
   const { user, isLoaded } = useUser();
+  const { theme, toggleTheme } = useTheme();
 
   const role = (user?.publicMetadata as any)?.role || (user?.unsafeMetadata as any)?.role || profile?.role || 'STUDENT';
   const isTeacher = role === 'TEACHER';
+
+  // Compute clean display name (never raw email)
+  const rawEmail = user?.primaryEmailAddress?.emailAddress || '';
+  const emailPrefix = rawEmail ? rawEmail.split('@')[0] : 'User';
+  const formattedPrefix = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+  const displayName = profile?.fullName || user?.fullName || user?.firstName || formattedPrefix;
 
   const teacherLinks = [
     { href: '/admin/batches', label: 'Batches', icon: LayoutDashboard },
@@ -40,7 +48,7 @@ export default function Navbar({ profile }: NavbarProps) {
   const navLinks = isTeacher ? teacherLinks : studentLinks;
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-white">
+    <header className="sticky top-0 z-40 bg-slate-900/95 dark:bg-slate-900/95 light:bg-white/95 backdrop-blur border-b border-slate-800 text-white">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href={isTeacher ? '/admin/batches' : '/student/timeline'} className="flex items-center space-x-2 font-bold text-xl text-indigo-400 hover:text-indigo-300 transition-colors">
           <BookOpen className="w-7 h-7 text-indigo-500" />
@@ -71,10 +79,19 @@ export default function Navbar({ profile }: NavbarProps) {
 
         {/* User Info & Clerk UserButton */}
         <div className="flex items-center space-x-3">
+          {/* Theme Switcher Button */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded-lg transition-colors"
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+          </button>
+
           {isLoaded && user && (
             <div className="hidden sm:flex flex-col items-end text-xs">
               <span className="font-semibold text-slate-100 max-w-[140px] truncate">
-                {user.fullName || user.primaryEmailAddress?.emailAddress}
+                {displayName}
               </span>
               <span className="text-[10px] text-indigo-400 font-mono font-medium">
                 {role} {role === 'STUDENT' && profile ? `• ${profile.points} pts` : ''}

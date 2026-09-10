@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 };
 
+import { ThemeProvider } from '@/components/ThemeProvider';
+
 export default function RootLayout({
   children,
 }: {
@@ -25,8 +27,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className="dark">
         <body className={`${inter.className} min-h-screen bg-slate-950 text-slate-100 antialiased`}>
-          {children}
-          <Toaster position="top-right" theme="dark" richColors />
+          <ThemeProvider>
+            {children}
+            <Toaster position="top-right" theme="dark" richColors />
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

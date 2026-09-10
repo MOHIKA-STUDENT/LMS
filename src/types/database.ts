@@ -13,14 +13,15 @@ export interface Batch {
 
 export interface Profile {
   id: string;
-  full_name: string;
+  fullName: string;
   email: string;
   role: UserRole;
-  batch_id: string | null;
+  batchId?: string | null;
+  avatarUrl?: string | null;
   points: number;
-  is_active: boolean;
-  created_at: string;
-  batches?: Batch | null;
+  isActive: boolean;
+  createdAt: string;
+  batch?: Batch | null;
 }
 
 export interface CourseMaterial {
