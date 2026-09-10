@@ -101,7 +101,7 @@ ALTER TABLE homework_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quizzes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quiz_submissions ENABLE ROW LEVEL SECURITY;
 
--- Helper Function: Check if current user is a Teacher (Isolated SECURITY DEFINER)
+-- Helper Function: Check if current user is a Teacher (Isolated SECURITY DEFINER with EXCEPTION Handling)
 CREATE OR REPLACE FUNCTION public.is_teacher()
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -112,6 +112,8 @@ BEGIN
   WHERE id = auth.uid();
 
   RETURN (v_role = 'TEACHER');
+EXCEPTION WHEN OTHERS THEN
+  RETURN false;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -126,6 +128,8 @@ BEGIN
   WHERE id = auth.uid();
 
   RETURN v_batch_id;
+EXCEPTION WHEN OTHERS THEN
+  RETURN NULL;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -250,21 +254,24 @@ CREATE POLICY "Students can submit quiz results"
   ON quiz_submissions FOR INSERT
   WITH CHECK (student_id = auth.uid());
 
--- Trigger to auto-create profile row on Supabase Auth Signup
+-- Trigger to auto-create profile row on Supabase Auth Signup (Fail-Safe)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, email, role, batch_id)
+  INSERT INTO public.profiles (id, full_name, email, role, batch_id, is_active)
   VALUES (
     new.id,
-    COALESCE(new.raw_user_meta_data->>'full_name', new.email),
-    new.email,
+    COALESCE(new.raw_user_meta_data->>'full_name', new.email, 'User'),
+    COALESCE(new.email, 'user@academy.com'),
     COALESCE(new.raw_user_meta_data->>'role', 'STUDENT'),
-    NULLIF(new.raw_user_meta_data->>'batch_id', '')::UUID
+    NULLIF(new.raw_user_meta_data->>'batch_id', '')::UUID,
+    true
   )
   ON CONFLICT (id) DO UPDATE SET
     full_name = EXCLUDED.full_name,
     email = EXCLUDED.email;
+  RETURN new;
+EXCEPTION WHEN OTHERS THEN
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
