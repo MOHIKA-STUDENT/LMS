@@ -1,43 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getQuizzesAction, submitQuizAction } from '@/app/actions/lms-actions';
 import { offlineDb } from '@/lib/db/offline-db';
-import { Quiz, QuizQuestion } from '@/types/database';
 import { Sparkles, CheckCircle2, XCircle, Award, HelpCircle, ArrowRight, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StudentQuizzesPage() {
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [activeQuiz, setActiveQuiz] = useState<any | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
-
   const fetchQuizzes = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('batch_id')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.batch_id) {
-        const { data: qData } = await supabase
-          .from('quizzes')
-          .select('*')
-          .eq('batch_id', profile.batch_id)
-          .order('created_at', { ascending: false });
-
-        if (qData) setQuizzes(qData as Quiz[]);
-      }
+    const res = await getQuizzesAction();
+    if (res.success && res.quizzes) {
+      setQuizzes(res.quizzes);
     }
     setLoading(false);
   };
@@ -57,9 +39,9 @@ export default function StudentQuizzesPage() {
   const handleQuizSubmit = async () => {
     if (!activeQuiz) return;
 
-    // Calculate score
+    const questionsList = (activeQuiz.questions as any[]) || [];
     let calculatedScore = 0;
-    activeQuiz.questions.forEach((q) => {
+    questionsList.forEach((q: any) => {
       if (selectedAnswers[q.id] === q.correctAnswerIndex) {
         calculatedScore++;
       }
@@ -68,66 +50,40 @@ export default function StudentQuizzesPage() {
     setScore(calculatedScore);
     setIsSubmitted(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const payload = {
-      quiz_id: activeQuiz.id,
-      student_id: user.id,
-      score: calculatedScore,
-      total_questions: activeQuiz.questions.length,
-      answers_submitted: selectedAnswers,
-    };
+    const pointsEarned = calculatedScore * 10;
 
     // Check online status for offline queue intercept
     if (!navigator.onLine) {
-      // Save offline in IndexedDB
       await offlineDb.offlineQueue.add({
         type: 'SUBMIT_QUIZ',
-        payload: payload,
+        payload: { quizId: activeQuiz.id, scoreAwarded: pointsEarned },
         timestamp: Date.now(),
         synced: false,
       });
 
       toast.info('Saved quiz result locally in IndexedDB! Will sync when back online.', {
-        description: `You earned ${calculatedScore * 10} points offline.`,
+        description: `You earned ${pointsEarned} points offline.`,
       });
-
       return;
     }
 
     try {
-      // Submit directly to Supabase
-      const { error } = await supabase.from('quiz_submissions').insert(payload);
-      if (error) throw error;
+      const res = await submitQuizAction(activeQuiz.id, pointsEarned);
+      if (!res.success) throw new Error(res.error);
 
-      // Update student points in profiles
-      const { data: pData } = await supabase
-        .from('profiles')
-        .select('points')
-        .eq('id', user.id)
-        .single();
-
-      if (pData) {
-        await supabase
-          .from('profiles')
-          .update({ points: (pData.points || 0) + calculatedScore * 10 })
-          .eq('id', user.id);
-      }
-
-      toast.success(`Quiz Completed! +${calculatedScore * 10} points awarded!`);
+      toast.success(`Quiz Completed! +${pointsEarned} points awarded!`);
     } catch (err: any) {
       toast.error('Failed to submit online. Backing up locally...');
       await offlineDb.offlineQueue.add({
         type: 'SUBMIT_QUIZ',
-        payload: payload,
+        payload: { quizId: activeQuiz.id, scoreAwarded: pointsEarned },
         timestamp: Date.now(),
         synced: false,
       });
     }
   };
 
-  const startQuiz = (quiz: Quiz) => {
+  const startQuiz = (quiz: any) => {
     setActiveQuiz(quiz);
     setCurrentQuestionIndex(0);
     setSelectedAnswers({});
@@ -153,7 +109,7 @@ export default function StudentQuizzesPage() {
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div>
               <span className="px-2.5 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-xs font-mono font-bold">
-                {activeQuiz.cefr_level} LEVEL
+                {activeQuiz.cefrLevel} LEVEL
               </span>
               <h2 className="text-xl font-bold text-white mt-1">{activeQuiz.title}</h2>
             </div>
@@ -182,7 +138,7 @@ export default function StudentQuizzesPage() {
                     </h3>
 
                     <div className="space-y-2.5">
-                      {q.options.map((opt, optIdx) => {
+                      {q.options.map((opt: string, optIdx: number) => {
                         const isSelected = selectedAnswers[q.id] === optIdx;
                         return (
                           <button
@@ -250,7 +206,7 @@ export default function StudentQuizzesPage() {
               {/* Explanations Review */}
               <div className="space-y-4 text-left border-t border-slate-800 pt-6">
                 <h4 className="font-bold text-slate-200 text-sm">Question Explanations:</h4>
-                {activeQuiz.questions.map((q, idx) => {
+                {activeQuiz.questions.map((q: any, idx: number) => {
                   const studentAns = selectedAnswers[q.id];
                   const isCorrect = studentAns === q.correctAnswerIndex;
                   return (
@@ -298,7 +254,7 @@ export default function StudentQuizzesPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <span className="px-2.5 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-xs font-mono font-bold">
-                    {quiz.cefr_level}
+                    {quiz.cefrLevel}
                   </span>
                   <span className="text-xs text-slate-500">5 Questions</span>
                 </div>

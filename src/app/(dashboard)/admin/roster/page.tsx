@@ -1,40 +1,40 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Profile, Batch } from '@/types/database';
+import {
+  getRosterAction,
+  getBatchesAction,
+  updateStudentBatchAction,
+  updateStudentAccessAction,
+  deleteStudentAction,
+} from '@/app/actions/lms-actions';
 import { Users, Award, Shield, CheckCircle2, Edit, Trash2, UserX, UserCheck, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function RosterPage() {
-  const [students, setStudents] = useState<Profile[]>([]);
-  const [batches, setBatches] = useState<Batch[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Edit Modal State
-  const [editingStudent, setEditingStudent] = useState<Profile | null>(null);
+  const [editingStudent, setEditingStudent] = useState<any | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editBatchId, setEditBatchId] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const supabase = createClient();
-
   const fetchData = async () => {
     setLoading(true);
-    const { data: studentsData } = await supabase
-      .from('profiles')
-      .select('*, batches(*)')
-      .order('created_at', { ascending: false });
+    const rosterRes = await getRosterAction();
+    const batchRes = await getBatchesAction();
 
-    const { data: batchesData } = await supabase
-      .from('batches')
-      .select('*')
-      .order('name');
-
-    if (studentsData) setStudents(studentsData as Profile[]);
-    if (batchesData) setBatches(batchesData);
+    if (rosterRes.success && rosterRes.profiles) {
+      setStudents(rosterRes.profiles);
+    }
+    if (batchRes.success && batchRes.batches) {
+      setBatches(batchRes.batches);
+    }
     setLoading(false);
   };
 
@@ -43,58 +43,46 @@ export default function RosterPage() {
   }, []);
 
   const handleAssignBatch = async (studentId: string, batchId: string) => {
-    const newBatchId = batchId === '' ? null : batchId;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ batch_id: newBatchId })
-      .eq('id', studentId);
-
-    if (error) {
-      toast.error('Failed to update student batch.');
+    const res = await updateStudentBatchAction(studentId, batchId || null);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to update student batch.');
     } else {
       toast.success('Student batch updated!');
       fetchData();
     }
   };
 
-  const handleToggleAccess = async (student: Profile) => {
-    const newStatus = !student.is_active;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_active: newStatus })
-      .eq('id', student.id);
+  const handleToggleAccess = async (student: any) => {
+    const newStatus = !(student.isActive !== false);
+    const res = await updateStudentAccessAction(student.id, newStatus);
 
-    if (error) {
-      toast.error('Failed to update access status.');
+    if (!res.success) {
+      toast.error(res.error || 'Failed to update access status.');
     } else {
-      toast.success(`Access ${newStatus ? 'granted' : 'suspended'} for ${student.full_name}.`);
+      toast.success(`Access ${newStatus ? 'granted' : 'suspended'} for ${student.fullName}.`);
       fetchData();
     }
   };
 
-  const handleDeleteStudent = async (student: Profile) => {
-    if (!confirm(`Are you sure you want to remove student "${student.full_name}" from the academy? This action cannot be undone.`)) {
+  const handleDeleteStudent = async (student: any) => {
+    if (!confirm(`Are you sure you want to remove student "${student.fullName}" from the academy? This action cannot be undone.`)) {
       return;
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', student.id);
-
-    if (error) {
-      toast.error('Failed to remove student profile.');
+    const res = await deleteStudentAction(student.id);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to remove student profile.');
     } else {
-      toast.success(`Student ${student.full_name} removed.`);
+      toast.success(`Student ${student.fullName} removed.`);
       fetchData();
     }
   };
 
-  const openEditModal = (student: Profile) => {
+  const openEditModal = (student: any) => {
     setEditingStudent(student);
-    setEditName(student.full_name);
+    setEditName(student.fullName);
     setEditEmail(student.email);
-    setEditBatchId(student.batch_id || '');
+    setEditBatchId(student.batchId || '');
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -103,16 +91,8 @@ export default function RosterPage() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: editName,
-          email: editEmail,
-          batch_id: editBatchId === '' ? null : editBatchId,
-        })
-        .eq('id', editingStudent.id);
-
-      if (error) throw error;
+      const res = await updateStudentBatchAction(editingStudent.id, editBatchId || null);
+      if (!res.success) throw new Error(res.error);
 
       toast.success('Student details updated successfully!');
       setEditingStudent(null);
@@ -125,8 +105,8 @@ export default function RosterPage() {
   };
 
   const filteredStudents = students.filter((s) =>
-    s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (s.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -174,21 +154,21 @@ export default function RosterPage() {
                   <tr key={student.id} className="hover:bg-slate-800/40 transition-colors">
                     <td className="px-6 py-4 font-semibold text-white flex items-center space-x-3">
                       <div className="w-9 h-9 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold">
-                        {student.full_name.charAt(0).toUpperCase()}
+                        {(student.fullName || 'S').charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div>{student.full_name}</div>
+                        <div>{student.fullName}</div>
                         <div className="text-[11px] text-slate-500 font-normal">{student.role}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-slate-400 font-mono text-xs">{student.email}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        student.is_active !== false
+                        student.isActive !== false
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                           : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                       }`}>
-                        {student.is_active !== false ? (
+                        {student.isActive !== false ? (
                           <>
                             <UserCheck className="w-3 h-3 mr-1 text-emerald-400" />
                             <span>Active</span>
@@ -204,14 +184,14 @@ export default function RosterPage() {
                     <td className="px-6 py-4">
                       {student.role === 'STUDENT' ? (
                         <select
-                          value={student.batch_id || ''}
+                          value={student.batchId || ''}
                           onChange={(e) => handleAssignBatch(student.id, e.target.value)}
                           className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500"
                         >
                           <option value="">-- No Batch --</option>
                           {batches.map((b) => (
                             <option key={b.id} value={b.id}>
-                              {b.name} ({b.cefr_level})
+                              {b.name} ({b.cefrLevel})
                             </option>
                           ))}
                         </select>
@@ -234,13 +214,13 @@ export default function RosterPage() {
                       <button
                         onClick={() => handleToggleAccess(student)}
                         className={`p-1.5 rounded-lg transition-colors ${
-                          student.is_active !== false
+                          student.isActive !== false
                             ? 'text-amber-400 hover:bg-slate-800'
                             : 'text-emerald-400 hover:bg-slate-800'
                         }`}
-                        title={student.is_active !== false ? 'Suspend Access' : 'Grant Access'}
+                        title={student.isActive !== false ? 'Suspend Access' : 'Grant Access'}
                       >
-                        {student.is_active !== false ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        {student.isActive !== false ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                       </button>
 
                       <button

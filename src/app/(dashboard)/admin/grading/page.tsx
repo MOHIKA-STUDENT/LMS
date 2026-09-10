@@ -1,32 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { HomeworkSubmission } from '@/types/database';
+import { getSubmissionsAction, gradeSubmissionAction } from '@/app/actions/lms-actions';
 import { CheckSquare, Award, MessageSquare, ExternalLink, Bot, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function GradingPage() {
-  const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubmission, setActiveSubmission] = useState<HomeworkSubmission | null>(null);
+  const [activeSubmission, setActiveSubmission] = useState<any | null>(null);
   const [feedback, setFeedback] = useState('');
   const [score, setScore] = useState<number>(100);
   const [saving, setSaving] = useState(false);
 
-  const supabase = createClient();
-
   const fetchSubmissions = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('homework_submissions')
-      .select('*, profiles(*), assignments(*)')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      toast.error('Failed to load submissions.');
+    const res = await getSubmissionsAction();
+    if (!res.success) {
+      toast.error(res.error || 'Failed to load submissions.');
     } else {
-      setSubmissions((data as HomeworkSubmission[]) || []);
+      setSubmissions(res.submissions || []);
     }
     setLoading(false);
   };
@@ -35,10 +28,10 @@ export default function GradingPage() {
     fetchSubmissions();
   }, []);
 
-  const openGradingModal = (sub: HomeworkSubmission) => {
+  const openGradingModal = (sub: any) => {
     setActiveSubmission(sub);
-    setFeedback(sub.teacher_feedback || '');
-    setScore(sub.score_awarded || 100);
+    setFeedback(sub.teacherFeedback || '');
+    setScore(sub.scoreAwarded || 100);
   };
 
   const handleGradeSubmit = async (e: React.FormEvent) => {
@@ -47,32 +40,8 @@ export default function GradingPage() {
 
     setSaving(true);
     try {
-      // 1. Update submission record
-      const { error: subError } = await supabase
-        .from('homework_submissions')
-        .update({
-          teacher_feedback: feedback,
-          score_awarded: score,
-        })
-        .eq('id', activeSubmission.id);
-
-      if (subError) throw subError;
-
-      // 2. Award points to student profile
-      const studentId = activeSubmission.student_id;
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('points')
-        .eq('id', studentId)
-        .single();
-
-      if (profileData) {
-        const newPoints = (profileData.points || 0) + score;
-        await supabase
-          .from('profiles')
-          .update({ points: newPoints })
-          .eq('id', studentId);
-      }
+      const res = await gradeSubmissionAction(activeSubmission.id, feedback, score);
+      if (!res.success) throw new Error(res.error);
 
       toast.success(`Graded! ${score} points awarded to student.`);
       setActiveSubmission(null);
@@ -109,44 +78,44 @@ export default function GradingPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-indigo-400 bg-indigo-500/20 border border-indigo-500/30 px-2.5 py-0.5 rounded-full">
-                    {sub.profiles?.full_name || 'Student'}
+                    {sub.student?.fullName || 'Student'}
                   </span>
                   <span className="text-xs text-amber-400 font-mono font-semibold">
-                    {sub.score_awarded > 0 ? `+${sub.score_awarded} pts` : 'Pending Grade'}
+                    {sub.scoreAwarded > 0 ? `+${sub.scoreAwarded} pts` : 'Pending Grade'}
                   </span>
                 </div>
 
-                <h3 className="font-bold text-white text-base">{sub.assignments?.title || 'Homework Assignment'}</h3>
+                <h3 className="font-bold text-white text-base">{sub.assignment?.title || 'Homework Assignment'}</h3>
 
-                {sub.submission_text && (
+                {sub.writtenResponse && (
                   <p className="text-xs text-slate-300 bg-slate-800/80 p-3 rounded-xl line-clamp-3 font-serif italic border border-slate-700/50">
-                    "{sub.submission_text}"
+                    "{sub.writtenResponse}"
                   </p>
                 )}
 
-                {sub.ai_proofread_report && (
+                {sub.aiProofreadReport && (
                   <div className="p-3 bg-purple-950/40 border border-purple-800/40 rounded-xl text-xs space-y-1">
                     <div className="flex items-center justify-between text-purple-300 font-bold">
                       <span className="flex items-center space-x-1">
                         <Bot className="w-3.5 h-3.5 text-purple-400" />
                         <span>AI Grammar Score</span>
                       </span>
-                      <span>{sub.ai_proofread_report.grammar_score}%</span>
+                      <span>{sub.aiProofreadReport.grammar_score}%</span>
                     </div>
-                    <p className="text-slate-400 line-clamp-2">{sub.ai_proofread_report.overall_feedback}</p>
+                    <p className="text-slate-400 line-clamp-2">{sub.aiProofreadReport.overall_feedback}</p>
                   </div>
                 )}
               </div>
 
               <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                <span className="text-xs text-slate-500">{new Date(sub.created_at).toLocaleDateString()}</span>
+                <span className="text-xs text-slate-500">{new Date(sub.createdAt).toLocaleDateString()}</span>
 
                 <button
                   onClick={() => openGradingModal(sub)}
                   className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow transition-all"
                 >
                   <Award className="w-3.5 h-3.5" />
-                  <span>{sub.score_awarded > 0 ? 'Edit Grade' : 'Grade Homework'}</span>
+                  <span>{sub.scoreAwarded > 0 ? 'Edit Grade' : 'Grade Homework'}</span>
                 </button>
               </div>
             </div>
@@ -160,28 +129,28 @@ export default function GradingPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-white flex items-center space-x-2">
               <Award className="w-6 h-6 text-indigo-400" />
-              <span>Grade Submission - {activeSubmission.profiles?.full_name}</span>
+              <span>Grade Submission - {activeSubmission.student?.fullName}</span>
             </h2>
 
             {/* Submission Content */}
             <div className="bg-slate-800/60 p-4 rounded-xl space-y-2 text-sm">
               <h4 className="font-semibold text-slate-300">Student Submission Text:</h4>
               <p className="text-slate-200 whitespace-pre-wrap font-serif bg-slate-950/60 p-3 rounded-lg border border-slate-800">
-                {activeSubmission.submission_text || 'No text submitted.'}
+                {activeSubmission.writtenResponse || 'No text submitted.'}
               </p>
             </div>
 
             {/* AI Proofreader Breakdown if available */}
-            {activeSubmission.ai_proofread_report && (
+            {activeSubmission.aiProofreadReport && (
               <div className="bg-purple-950/30 border border-purple-800/50 p-4 rounded-xl space-y-2 text-xs">
                 <h4 className="font-bold text-purple-300 flex items-center space-x-1 text-sm">
                   <Bot className="w-4 h-4 text-purple-400" />
-                  <span>AI Proofreader Analysis ({activeSubmission.ai_proofread_report.grammar_score}% Score)</span>
+                  <span>AI Proofreader Analysis ({activeSubmission.aiProofreadReport.grammar_score}% Score)</span>
                 </h4>
-                <p className="text-slate-300">{activeSubmission.ai_proofread_report.overall_feedback}</p>
+                <p className="text-slate-300">{activeSubmission.aiProofreadReport.overall_feedback}</p>
                 <div className="font-semibold text-purple-200 pt-1">AI Improved Version:</div>
                 <div className="bg-slate-950/60 p-2.5 rounded text-emerald-300 font-serif">
-                  {activeSubmission.ai_proofread_report.improved_version}
+                  {activeSubmission.aiProofreadReport.improved_version}
                 </div>
               </div>
             )}

@@ -3,19 +3,25 @@ import { AIProofreadReport, QuizQuestion } from './database';
 export type OfflineActionType = 'SUBMIT_HOMEWORK' | 'SUBMIT_QUIZ';
 
 export interface PendingHomeworkPayload {
-  assignment_id: string;
-  student_id: string;
+  assignmentId?: string;
+  assignment_id?: string;
+  studentId?: string;
+  student_id?: string;
+  writtenResponse?: string | null;
   submission_text?: string | null;
   file_url?: string | null;
   ai_proofread_report?: AIProofreadReport | null;
 }
 
 export interface PendingQuizPayload {
-  quiz_id: string;
-  student_id: string;
-  score: number;
-  total_questions: number;
-  answers_submitted: Record<number, number>;
+  quizId?: string;
+  quiz_id?: string;
+  studentId?: string;
+  student_id?: string;
+  scoreAwarded?: number;
+  score?: number;
+  total_questions?: number;
+  answers_submitted?: Record<number, number>;
 }
 
 export interface OfflineAction {

@@ -1,6 +1,5 @@
 import { offlineDb } from '../db/offline-db';
-import { createClient } from '../supabase/client';
-import { PendingHomeworkPayload, PendingQuizPayload } from '@/types/lms';
+import { submitQuizAction, submitHomeworkAction } from '@/app/actions/lms-actions';
 import { toast } from 'sonner';
 
 export async function processOfflineQueue() {
@@ -13,62 +12,28 @@ export async function processOfflineQueue() {
 
   if (pendingActions.length === 0) return;
 
-  const supabase = createClient();
   let syncCount = 0;
 
   for (const action of pendingActions) {
     try {
       if (action.type === 'SUBMIT_HOMEWORK') {
-        const payload = action.payload as PendingHomeworkPayload;
-        const { error } = await supabase.from('homework_submissions').insert({
-          assignment_id: payload.assignment_id,
-          student_id: payload.student_id,
-          submission_text: payload.submission_text || null,
-          file_url: payload.file_url || null,
-          ai_proofread_report: payload.ai_proofread_report || null,
-        });
+        const payload = action.payload as any;
+        const formData = new FormData();
+        if (payload.assignmentId) formData.append('assignmentId', payload.assignmentId);
+        if (payload.writtenResponse) formData.append('writtenResponse', payload.writtenResponse);
 
-        if (!error && action.id) {
+        const res = await submitHomeworkAction(formData);
+        if (res.success && action.id) {
           await offlineDb.offlineQueue.delete(action.id);
           syncCount++;
         }
       } else if (action.type === 'SUBMIT_QUIZ') {
-        const payload = action.payload as PendingQuizPayload;
-        const { error } = await supabase.from('quiz_submissions').insert({
-          quiz_id: payload.quiz_id,
-          student_id: payload.student_id,
-          score: payload.score,
-          total_questions: payload.total_questions,
-          answers_submitted: payload.answers_submitted,
-        });
+        const payload = action.payload as any;
+        const res = await submitQuizAction(payload.quizId, payload.scoreAwarded || 0);
 
-        if (!error) {
-          // Also update student points in profiles
-          const { error: rpcError } = await supabase.rpc('increment_student_points', {
-            p_student_id: payload.student_id,
-            p_points: payload.score * 10,
-          });
-
-          if (rpcError) {
-            // Fallback manual update if RPC function not present in DB
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('points')
-              .eq('id', payload.student_id)
-              .single();
-
-            if (profileData) {
-              await supabase
-                .from('profiles')
-                .update({ points: (profileData.points || 0) + payload.score * 10 })
-                .eq('id', payload.student_id);
-            }
-          }
-
-          if (action.id) {
-            await offlineDb.offlineQueue.delete(action.id);
-            syncCount++;
-          }
+        if (res.success && action.id) {
+          await offlineDb.offlineQueue.delete(action.id);
+          syncCount++;
         }
       }
     } catch (err) {

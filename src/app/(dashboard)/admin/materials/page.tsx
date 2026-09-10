@@ -1,15 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Batch, CourseMaterial } from '@/types/database';
+import {
+  getBatchesAction,
+  getMaterialsAction,
+  uploadMaterialAction,
+  deleteMaterialAction,
+} from '@/app/actions/lms-actions';
 import { processAndValidateFileUpload } from '@/lib/utils/asset-shield';
 import { BookOpen, UploadCloud, FileText, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MaterialsPage() {
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [materials, setMaterials] = useState<CourseMaterial[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -17,20 +21,20 @@ export default function MaterialsPage() {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
-
   const fetchData = async () => {
     setLoading(true);
-    const { data: bData } = await supabase.from('batches').select('*').order('name');
-    const { data: mData } = await supabase.from('course_materials').select('*').order('created_at', { ascending: false });
+    const bRes = await getBatchesAction();
+    const mRes = await getMaterialsAction();
 
-    if (bData) {
-      setBatches(bData);
-      if (bData.length > 0 && !selectedBatchId) {
-        setSelectedBatchId(bData[0].id);
+    if (bRes.success && bRes.batches) {
+      setBatches(bRes.batches);
+      if (bRes.batches.length > 0 && !selectedBatchId) {
+        setSelectedBatchId(bRes.batches[0].id);
       }
     }
-    if (mData) setMaterials(mData);
+    if (mRes.success && mRes.materials) {
+      setMaterials(mRes.materials);
+    }
     setLoading(false);
   };
 
@@ -61,37 +65,18 @@ export default function MaterialsPage() {
       }
 
       const fileToUpload = validation.processedFile;
-      const fileExt = fileToUpload.name.split('.').pop();
-      const filePath = `materials/${selectedBatchId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      // 2. Upload object to Supabase Storage Bucket
-      const { error: storageError } = await supabase.storage
-        .from('course-materials')
-        .upload(filePath, fileToUpload);
+      // 2. Upload using Cloudinary via Server Action
+      const formData = new FormData();
+      formData.append('batchId', selectedBatchId);
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('file', fileToUpload);
 
-      // If bucket does not exist or upload fails, store URL reference safely
-      let publicUrl = '';
-      if (!storageError) {
-        const { data: urlData } = supabase.storage.from('course-materials').getPublicUrl(filePath);
-        publicUrl = urlData.publicUrl;
-      } else {
-        // Fallback for demonstration if bucket RLS requires public creation
-        publicUrl = `https://storage.placeholder.com/${filePath}`;
-      }
+      const res = await uploadMaterialAction(formData);
+      if (!res.success) throw new Error(res.error);
 
-      // 3. Insert record into database
-      const { error: dbError } = await supabase.from('course_materials').insert({
-        batch_id: selectedBatchId,
-        title: title,
-        description: description,
-        file_url: publicUrl,
-        file_type: fileExt || 'document',
-        file_size_bytes: fileToUpload.size,
-      });
-
-      if (dbError) throw dbError;
-
-      toast.success('Course material uploaded successfully!');
+      toast.success('Course material uploaded to Cloudinary successfully!');
       setTitle('');
       setDescription('');
       setFile(null);
@@ -104,9 +89,9 @@ export default function MaterialsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('course_materials').delete().eq('id', id);
-    if (error) {
-      toast.error('Failed to delete material.');
+    const res = await deleteMaterialAction(id);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to delete material.');
     } else {
       toast.success('Material deleted.');
       fetchData();
@@ -136,7 +121,7 @@ export default function MaterialsPage() {
             >
               {batches.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} ({b.cefr_level})
+                  {b.name} ({b.cefrLevel})
                 </option>
               ))}
             </select>
@@ -200,7 +185,7 @@ export default function MaterialsPage() {
         ) : (
           <div className="divide-y divide-slate-800">
             {materials.map((m) => {
-              const batchName = batches.find((b) => b.id === m.batch_id)?.name || 'Unknown Batch';
+              const batchName = batches.find((b) => b.id === m.batchId)?.name || 'Unknown Batch';
               return (
                 <div key={m.id} className="py-4 flex items-center justify-between hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
                   <div className="flex items-center space-x-3">
@@ -210,14 +195,14 @@ export default function MaterialsPage() {
                     <div>
                       <h4 className="font-semibold text-white text-sm">{m.title}</h4>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Batch: <span className="text-indigo-300 font-medium">{batchName}</span> • {(m.file_size_bytes / (1024 * 1024)).toFixed(2)} MB • {m.file_type.toUpperCase()}
+                        Batch: <span className="text-indigo-300 font-medium">{batchName}</span> • {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • {(m.fileType || 'file').toUpperCase()}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-2">
                     <a
-                      href={m.file_url}
+                      href={m.fileUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="p-2 text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"

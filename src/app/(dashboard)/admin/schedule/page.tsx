@@ -1,30 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Batch } from '@/types/database';
+import { getBatchesAction, updateBatchScheduleAction } from '@/app/actions/lms-actions';
 import { Calendar, Video, Save, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function SchedulePage() {
-  const [batches, setBatches] = useState<Batch[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [scheduleInfo, setScheduleInfo] = useState('');
   const [zoomLink, setZoomLink] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
-
   const fetchBatches = async () => {
     setLoading(true);
-    const { data } = await supabase.from('batches').select('*').order('name');
-    if (data) {
-      setBatches(data);
-      if (data.length > 0) {
-        setSelectedBatchId(data[0].id);
-        setScheduleInfo(data[0].schedule_info || '');
-        setZoomLink(data[0].zoom_link || '');
+    const res = await getBatchesAction();
+    if (res.success && res.batches) {
+      setBatches(res.batches);
+      if (res.batches.length > 0) {
+        setSelectedBatchId(res.batches[0].id);
+        setScheduleInfo(res.batches[0].scheduleInfo || '');
+        setZoomLink(res.batches[0].zoomLink || '');
       }
     }
     setLoading(false);
@@ -38,8 +35,8 @@ export default function SchedulePage() {
     setSelectedBatchId(batchId);
     const b = batches.find((item) => item.id === batchId);
     if (b) {
-      setScheduleInfo(b.schedule_info || '');
-      setZoomLink(b.zoom_link || '');
+      setScheduleInfo(b.scheduleInfo || '');
+      setZoomLink(b.zoomLink || '');
     }
   };
 
@@ -49,15 +46,8 @@ export default function SchedulePage() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('batches')
-        .update({
-          schedule_info: scheduleInfo,
-          zoom_link: zoomLink,
-        })
-        .eq('id', selectedBatchId);
-
-      if (error) throw error;
+      const res = await updateBatchScheduleAction(selectedBatchId, scheduleInfo, zoomLink);
+      if (!res.success) throw new Error(res.error);
 
       toast.success('Schedule & Zoom link updated for batch!');
       fetchBatches();
@@ -96,7 +86,7 @@ export default function SchedulePage() {
                 >
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name} ({b.cefr_level})
+                      {b.name} ({b.cefrLevel})
                     </option>
                   ))}
                 </select>
@@ -151,14 +141,14 @@ export default function SchedulePage() {
                 <div key={b.id} className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-xl space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-white">{b.name}</span>
-                    <span className="text-indigo-300 font-mono">{b.cefr_level}</span>
+                    <span className="text-indigo-300 font-mono">{b.cefrLevel}</span>
                   </div>
 
-                  <p className="text-xs text-slate-400">{b.schedule_info || 'No schedule set'}</p>
+                  <p className="text-xs text-slate-400">{b.scheduleInfo || 'No schedule set'}</p>
 
-                  {b.zoom_link ? (
+                  {b.zoomLink ? (
                     <a
-                      href={b.zoom_link}
+                      href={b.zoomLink}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center space-x-1 text-xs text-emerald-400 hover:underline pt-1 font-semibold"

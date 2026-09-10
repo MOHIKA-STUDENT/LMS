@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from 'sonner';
 import './globals.css';
 
@@ -7,7 +8,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'English Tutors Academy LMS',
-  description: 'Enterprise Offline-First LMS for English Tutors and Students with Gemini AI Integration',
+  description: 'Enterprise Offline-First LMS with Clerk Auth, Neon PostgreSQL, Cloudinary CDN, and Gemini AI',
 };
 
 export default function RootLayout({
@@ -16,11 +17,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} min-h-screen bg-slate-950 text-slate-100 antialiased`}>
-        {children}
-        <Toaster position="top-right" theme="dark" richColors />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className="dark">
+        <body className={`${inter.className} min-h-screen bg-slate-950 text-slate-100 antialiased`}>
+          {children}
+          <Toaster position="top-right" theme="dark" richColors />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

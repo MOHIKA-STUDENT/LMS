@@ -1,34 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Profile, Batch } from '@/types/database';
+import { getStudentProfileAction } from '@/app/actions/lms-actions';
 import { Calendar, Video, ExternalLink, Clock, Award, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StudentTimelinePage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [batch, setBatch] = useState<Batch | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [batch, setBatch] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchStudentData = async () => {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*, batches(*)')
-          .eq('id', user.id)
-          .single();
-
-        if (profileData) {
-          setProfile(profileData as Profile);
-          setBatch(profileData.batches as Batch | null);
-        }
+      const res = await getStudentProfileAction();
+      if (res.success && res.profile) {
+        setProfile(res.profile);
+        setBatch(res.profile.batch);
       }
       setLoading(false);
     };
@@ -45,10 +33,10 @@ export default function StudentTimelinePage() {
             STUDENT PORTAL
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">
-            Welcome back, {profile?.full_name || 'Student'}! 👋
+            Welcome back, {profile?.fullName || 'Student'}! 👋
           </h1>
           <p className="text-sm text-slate-300 mt-1">
-            Batch: <span className="font-semibold text-indigo-300">{batch?.name || 'Unassigned Batch'}</span> ({batch?.cefr_level || 'CEFR Level Pending'})
+            Batch: <span className="font-semibold text-indigo-300">{batch?.name || 'Unassigned Batch'}</span> ({batch?.cefrLevel || 'CEFR Level Pending'})
           </p>
         </div>
 
@@ -86,9 +74,9 @@ export default function StudentTimelinePage() {
               </p>
             </div>
 
-            {batch.zoom_link ? (
+            {batch.zoomLink ? (
               <a
-                href={batch.zoom_link}
+                href={batch.zoomLink}
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 transition-all group"
@@ -117,7 +105,7 @@ export default function StudentTimelinePage() {
                 <span>Timings Info</span>
               </div>
               <p className="text-base font-semibold text-white">
-                {batch.schedule_info || 'No live schedule info specified.'}
+                {batch.scheduleInfo || 'No live schedule info specified.'}
               </p>
             </div>
 

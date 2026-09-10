@@ -1,49 +1,36 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Profile } from '@/types/database';
+import { getLeaderboardAction } from '@/app/actions/lms-actions';
+import { useUser } from '@clerk/nextjs';
 import { Award, Trophy, Medal, Crown, Filter } from 'lucide-react';
 
 export default function StudentLeaderboardPage() {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const { user } = useUser();
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [currentUserBatchId, setCurrentUserBatchId] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<'GLOBAL' | 'BATCH'>('GLOBAL');
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
-
   useEffect(() => {
     const fetchLeaderboard = async () => {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        setCurrentUserId(user.id);
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('batch_id')
-          .eq('id', user.id)
-          .single();
-        if (userProfile) setCurrentUserBatchId(userProfile.batch_id);
+      const res = await getLeaderboardAction();
+      if (res.success && res.profiles) {
+        setProfiles(res.profiles);
+        const myProfile = res.profiles.find((p) => p.id === user?.id);
+        if (myProfile) {
+          setCurrentUserBatchId(myProfile.batchId);
+        }
       }
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('*, batches(*)')
-        .eq('role', 'STUDENT')
-        .order('points', { ascending: false });
-
-      if (data) setProfiles(data as Profile[]);
       setLoading(false);
     };
 
     fetchLeaderboard();
-  }, []);
+  }, [user?.id]);
 
   const displayedProfiles = filterMode === 'BATCH' && currentUserBatchId
-    ? profiles.filter((p) => p.batch_id === currentUserBatchId)
+    ? profiles.filter((p) => p.batchId === currentUserBatchId)
     : profiles;
 
   return (
@@ -110,8 +97,8 @@ export default function StudentLeaderboardPage() {
                     </div>
                     <Icon className="w-8 h-8" />
                     <div>
-                      <h4 className="font-bold text-white text-base">{p.full_name}</h4>
-                      <p className="text-xs opacity-80">{p.batches?.name || 'Academy Student'}</p>
+                      <h4 className="font-bold text-white text-base">{p.fullName}</h4>
+                      <p className="text-xs opacity-80">{p.batch?.name || 'Academy Student'}</p>
                     </div>
                     <div className="font-mono font-black text-lg text-amber-400">{p.points} PTS</div>
                   </div>
@@ -133,7 +120,7 @@ export default function StudentLeaderboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {displayedProfiles.map((p, index) => {
-                  const isCurrent = p.id === currentUserId;
+                  const isCurrent = p.id === user?.id;
                   return (
                     <tr
                       key={p.id}
@@ -146,12 +133,12 @@ export default function StudentLeaderboardPage() {
                       </td>
                       <td className="px-6 py-4 font-semibold text-white flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-indigo-400">
-                          {p.full_name.charAt(0).toUpperCase()}
+                          {(p.fullName || 'S').charAt(0).toUpperCase()}
                         </div>
-                        <span>{p.full_name} {isCurrent && '(You)'}</span>
+                        <span>{p.fullName} {isCurrent && '(You)'}</span>
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-400">
-                        {p.batches?.name || 'Unassigned'}
+                        {p.batch?.name || 'Unassigned'}
                       </td>
                       <td className="px-6 py-4 text-right font-bold text-amber-400 font-mono">
                         {p.points} PTS

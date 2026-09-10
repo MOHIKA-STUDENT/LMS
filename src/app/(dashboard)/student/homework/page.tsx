@@ -1,60 +1,38 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { proofreadHomeworkAction } from '@/app/actions/ai-actions';
+import { getAssignmentsAction, getSubmissionsAction, submitHomeworkAction } from '@/app/actions/lms-actions';
 import { processAndValidateFileUpload } from '@/lib/utils/asset-shield';
 import { offlineDb } from '@/lib/db/offline-db';
-import { Assignment, HomeworkSubmission, AIProofreadReport } from '@/types/database';
+import { AIProofreadReport } from '@/types/database';
 import { FileText, Bot, UploadCloud, CheckCircle2, Sparkles, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StudentHomeworkPage() {
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
   const [submissionText, setSubmissionText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [aiReport, setAiReport] = useState<AIProofreadReport | null>(null);
   const [proofreading, setProofreading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const supabase = createClient();
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const aRes = await getAssignmentsAction();
+    const sRes = await getSubmissionsAction();
 
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('batch_id')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.batch_id) {
-        const { data: aData } = await supabase
-          .from('assignments')
-          .select('*')
-          .eq('batch_id', profile.batch_id)
-          .order('due_date', { ascending: true });
-
-        if (aData) {
-          setAssignments(aData);
-          if (aData.length > 0 && !selectedAssignmentId) {
-            setSelectedAssignmentId(aData[0].id);
-          }
-        }
+    if (aRes.success && aRes.assignments) {
+      setAssignments(aRes.assignments);
+      if (aRes.assignments.length > 0 && !selectedAssignmentId) {
+        setSelectedAssignmentId(aRes.assignments[0].id);
       }
-
-      const { data: sData } = await supabase
-        .from('homework_submissions')
-        .select('*, assignments(*)')
-        .eq('student_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (sData) setSubmissions(sData as HomeworkSubmission[]);
+    }
+    if (sRes.success && sRes.submissions) {
+      setSubmissions(sRes.submissions);
     }
     setLoading(false);
   };
@@ -98,12 +76,7 @@ export default function StudentHomeworkPage() {
     setSubmitting(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      let uploadedFileUrl: string | null = null;
-
-      // Handle file upload if attached
+      let fileToUpload: File | null = null;
       if (file) {
         const validation = await processAndValidateFileUpload(file);
         if (!validation.valid || !validation.processedFile) {
@@ -111,35 +84,17 @@ export default function StudentHomeworkPage() {
           setSubmitting(false);
           return;
         }
-
-        const fileExt = validation.processedFile.name.split('.').pop();
-        const filePath = `homework/${user.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-        const { error: uploadErr } = await supabase.storage
-          .from('homework-submissions')
-          .upload(filePath, validation.processedFile);
-
-        if (!uploadErr) {
-          const { data: urlData } = supabase.storage.from('homework-submissions').getPublicUrl(filePath);
-          uploadedFileUrl = urlData.publicUrl;
-        } else {
-          uploadedFileUrl = `https://storage.placeholder.com/${filePath}`;
-        }
+        fileToUpload = validation.processedFile;
       }
-
-      const payload = {
-        assignment_id: selectedAssignmentId,
-        student_id: user.id,
-        submission_text: submissionText || null,
-        file_url: uploadedFileUrl,
-        ai_proofread_report: aiReport || undefined,
-      };
 
       // Check online status for offline queue
       if (!navigator.onLine) {
         await offlineDb.offlineQueue.add({
           type: 'SUBMIT_HOMEWORK',
-          payload: payload,
+          payload: {
+            assignmentId: selectedAssignmentId,
+            writtenResponse: submissionText,
+          },
           timestamp: Date.now(),
           synced: false,
         });
@@ -152,9 +107,15 @@ export default function StudentHomeworkPage() {
         return;
       }
 
-      // Online submission to Supabase
-      const { error } = await supabase.from('homework_submissions').insert(payload);
-      if (error) throw error;
+      const formData = new FormData();
+      formData.append('assignmentId', selectedAssignmentId);
+      formData.append('writtenResponse', submissionText);
+      if (fileToUpload) {
+        formData.append('file', fileToUpload);
+      }
+
+      const res = await submitHomeworkAction(formData);
+      if (!res.success) throw new Error(res.error);
 
       toast.success('Homework submitted successfully to your teacher!');
       setSubmissionText('');
@@ -200,7 +161,7 @@ export default function StudentHomeworkPage() {
                     ) : (
                       assignments.map((a) => (
                         <option key={a.id} value={a.id}>
-                          {a.title} (Due: {new Date(a.due_date).toLocaleDateString()})
+                          {a.title} {a.dueDate ? `(Due: ${new Date(a.dueDate).toLocaleDateString()})` : ''}
                         </option>
                       ))
                     )}
@@ -303,19 +264,19 @@ export default function StudentHomeworkPage() {
                 {submissions.map((sub) => (
                   <div key={sub.id} className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-white">{sub.assignments?.title || 'Assignment'}</span>
+                      <span className="font-bold text-white">{sub.assignment?.title || 'Assignment'}</span>
                       <span className="text-amber-400 font-mono font-semibold">
-                        {sub.score_awarded > 0 ? `+${sub.score_awarded} pts` : 'Pending'}
+                        {sub.scoreAwarded > 0 ? `+${sub.scoreAwarded} pts` : 'Pending'}
                       </span>
                     </div>
 
-                    {sub.teacher_feedback && (
+                    {sub.teacherFeedback && (
                       <div className="p-2 bg-indigo-950/40 border border-indigo-800/40 rounded text-indigo-200">
-                        💬 Teacher: "{sub.teacher_feedback}"
+                        💬 Teacher: "{sub.teacherFeedback}"
                       </div>
                     )}
 
-                    <div className="text-[11px] text-slate-500">{new Date(sub.created_at).toLocaleDateString()}</div>
+                    <div className="text-[11px] text-slate-500">{new Date(sub.createdAt).toLocaleDateString()}</div>
                   </div>
                 ))}
               </div>

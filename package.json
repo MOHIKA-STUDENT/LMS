@@ -9,15 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.2",
     "@google/genai": "^2.21.0",
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.116.0",
+    "@prisma/client": "^6.4.0",
     "browser-image-compression": "^2.0.2",
+    "cloudinary": "^2.11.0",
     "clsx": "^2.1.1",
     "dexie": "^4.4.5",
     "dexie-react-hooks": "^4.4.0",
     "lucide-react": "^1.43.0",
     "next": "16.3.4",
+    "next-cloudinary": "^6.18.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sonner": "^2.0.8",
@@ -30,6 +32,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "prisma": "^6.4.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

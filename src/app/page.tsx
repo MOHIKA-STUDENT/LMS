@@ -1,23 +1,14 @@
-import { createClient } from '@/lib/supabase/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpen, Shield, Users, Sparkles, ArrowRight } from 'lucide-react';
 
 export default async function HomePage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await currentUser();
 
   if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.role === 'TEACHER') {
+    const role = (user.publicMetadata as any)?.role || 'STUDENT';
+    if (role === 'TEACHER') {
       redirect('/admin/batches');
     } else {
       redirect('/student/timeline');
@@ -51,7 +42,7 @@ export default async function HomePage() {
       <main className="container mx-auto px-4 py-16 text-center max-w-4xl space-y-8">
         <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-indigo-300 text-xs font-semibold">
           <Sparkles className="w-4 h-4 text-indigo-400" />
-          <span>Next.js 14 • Supabase • Gemini AI • Offline-First PWA</span>
+          <span>Next.js 14 • Clerk Auth • Neon PostgreSQL • Cloudinary • Gemini AI</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight">

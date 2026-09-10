@@ -1,47 +1,33 @@
 'use server';
 
+import { currentUser } from '@clerk/nextjs/server';
+import { prisma } from '@/lib/db/prisma';
 import { generateQuizWithGemini, proofreadHomeworkWithGemini } from '@/lib/ai/gemini';
-import { createClient } from '@/lib/supabase/server';
-import { CEFRLevel } from '@/types/database';
+import { CEFRLevel } from '@prisma/client';
 
 export async function generateQuizAction(batchId: string, cefrLevel: CEFRLevel, topic: string) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
+    const user = await currentUser();
     if (!user) {
       return { success: false, error: 'Unauthorized. Please log in.' };
     }
 
-    // Check if user is a teacher
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.role !== 'TEACHER') {
+    const role = (user.publicMetadata as any)?.role || 'STUDENT';
+    if (role !== 'TEACHER') {
       return { success: false, error: 'Only teachers can generate AI quizzes.' };
     }
 
-    const quizData = await generateQuizWithGemini(topic, cefrLevel);
+    const quizData = await generateQuizWithGemini(topic, cefrLevel as any);
 
-    // Save quiz to database
-    const { data: insertedQuiz, error: insertError } = await supabase
-      .from('quizzes')
-      .insert({
-        batch_id: batchId,
+    const insertedQuiz = await prisma.quiz.create({
+      data: {
+        batchId,
         title: quizData.title,
-        cefr_level: cefrLevel,
-        topic: topic,
-        questions: quizData.questions,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      throw insertError;
-    }
+        cefrLevel,
+        topic,
+        questions: quizData.questions as any,
+      },
+    });
 
     return { success: true, quiz: insertedQuiz };
   } catch (error: any) {

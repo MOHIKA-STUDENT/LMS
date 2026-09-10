@@ -1,29 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { usePathname } from 'next/navigation';
+import { UserButton, useUser } from '@clerk/nextjs';
 import { Profile } from '@/types/database';
-import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LogOut, LayoutDashboard, CheckSquare } from 'lucide-react';
-import { toast } from 'sonner';
+import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LayoutDashboard, CheckSquare, Settings } from 'lucide-react';
 
 interface NavbarProps {
-  profile: Profile | null;
+  profile?: Profile | null;
 }
 
 export default function Navbar({ profile }: NavbarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const supabase = createClient();
+  const { user, isLoaded } = useUser();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success('Logged out successfully.');
-    router.push('/login');
-    router.refresh();
-  };
-
-  const isTeacher = profile?.role === 'TEACHER';
+  const role = (user?.publicMetadata as any)?.role || profile?.role || 'STUDENT';
+  const isTeacher = role === 'TEACHER';
 
   const teacherLinks = [
     { href: '/admin/batches', label: 'Batches', icon: LayoutDashboard },
@@ -74,28 +66,16 @@ export default function Navbar({ profile }: NavbarProps) {
           })}
         </nav>
 
-        {/* User Info & Actions */}
+        {/* User Info & Clerk UserButton */}
         <div className="flex items-center space-x-3">
-          {profile ? (
-            <div className="flex items-center space-x-2 bg-slate-800/60 border border-slate-700/60 px-3 py-1.5 rounded-xl">
-              <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-xs font-mono">
-                {(profile.full_name || profile.email).charAt(0).toUpperCase()}
-              </div>
-              <div className="hidden sm:flex flex-col items-start text-xs">
-                <span className="font-semibold text-slate-100 max-w-[120px] truncate">
-                  {profile.full_name || profile.email}
-                </span>
-                <span className="text-[10px] text-indigo-400 font-mono font-medium">
-                  {profile.role} {profile.role === 'STUDENT' && `• ${profile.points} pts`}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2 bg-slate-800/60 border border-slate-700/60 px-3 py-1.5 rounded-xl text-xs text-slate-300">
-              <div className="w-7 h-7 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-300 font-bold text-xs">
-                U
-              </div>
-              <span className="hidden sm:inline">Signed In</span>
+          {isLoaded && user && (
+            <div className="hidden sm:flex flex-col items-end text-xs">
+              <span className="font-semibold text-slate-100 max-w-[140px] truncate">
+                {user.fullName || user.primaryEmailAddress?.emailAddress}
+              </span>
+              <span className="text-[10px] text-indigo-400 font-mono font-medium">
+                {role} {role === 'STUDENT' && profile ? `• ${profile.points} pts` : ''}
+              </span>
             </div>
           )}
 
@@ -105,17 +85,11 @@ export default function Navbar({ profile }: NavbarProps) {
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-xs font-semibold"
               title="Account Settings"
             >
-              Settings
+              <Settings className="w-4 h-4" />
             </Link>
           )}
 
-          <button
-            onClick={handleLogout}
-            title="Log Out"
-            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <UserButton />
         </div>
       </div>
     </header>

@@ -1,35 +1,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { generateQuizAction } from '@/app/actions/ai-actions';
-import { Batch, CEFRLevel, Quiz } from '@/types/database';
+import { getBatchesAction, getQuizzesAction } from '@/app/actions/lms-actions';
+import { CEFRLevel } from '@prisma/client';
 import { Sparkles, Bot, CheckCircle2, HelpCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function QuizGenPage() {
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
   const [topic, setTopic] = useState('');
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
-
   const fetchData = async () => {
     setLoading(true);
-    const { data: bData } = await supabase.from('batches').select('*').order('name');
-    const { data: qData } = await supabase.from('quizzes').select('*').order('created_at', { ascending: false });
+    const bRes = await getBatchesAction();
+    const qRes = await getQuizzesAction();
 
-    if (bData) {
-      setBatches(bData);
-      if (bData.length > 0 && !selectedBatchId) {
-        setSelectedBatchId(bData[0].id);
+    if (bRes.success && bRes.batches) {
+      setBatches(bRes.batches);
+      if (bRes.batches.length > 0 && !selectedBatchId) {
+        setSelectedBatchId(bRes.batches[0].id);
       }
     }
-    if (qData) setQuizzes(qData as Quiz[]);
+    if (qRes.success && qRes.quizzes) {
+      setQuizzes(qRes.quizzes);
+    }
     setLoading(false);
   };
 
@@ -94,7 +94,7 @@ export default function QuizGenPage() {
             >
               {batches.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} ({b.cefr_level})
+                  {b.name} ({b.cefrLevel})
                 </option>
               ))}
             </select>
@@ -152,12 +152,12 @@ export default function QuizGenPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {quizzes.map((quiz) => {
-              const batchName = batches.find((b) => b.id === quiz.batch_id)?.name || 'Unknown Batch';
+              const batchName = batches.find((b) => b.id === quiz.batchId)?.name || 'Unknown Batch';
               return (
                 <div key={quiz.id} className="p-5 bg-slate-800/60 border border-slate-700/60 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-xs font-mono font-bold">
-                      {quiz.cefr_level}
+                      {quiz.cefrLevel}
                     </span>
                     <span className="text-xs text-slate-400">{batchName}</span>
                   </div>
@@ -170,7 +170,7 @@ export default function QuizGenPage() {
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Ready for Students</span>
                     </span>
-                    <span className="text-slate-500">{new Date(quiz.created_at).toLocaleDateString()}</span>
+                    <span className="text-slate-500">{new Date(quiz.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
               );

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Batch, CEFRLevel } from '@/types/database';
+import { getBatchesAction, createBatchAction } from '@/app/actions/lms-actions';
+import { CEFRLevel } from '@prisma/client';
 import { Plus, Users, Calendar, Video, BookOpen, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function BatchesPage() {
-  const [batches, setBatches] = useState<Batch[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
@@ -19,15 +19,13 @@ export default function BatchesPage() {
   const [zoomLink, setZoomLink] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const supabase = createClient();
-
   const fetchBatches = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('batches').select('*').order('created_at', { ascending: false });
-    if (error) {
-      toast.error('Failed to load batches');
+    const res = await getBatchesAction();
+    if (!res.success) {
+      toast.error(res.error || 'Failed to load batches');
     } else {
-      setBatches(data || []);
+      setBatches(res.batches || []);
     }
     setLoading(false);
   };
@@ -41,15 +39,15 @@ export default function BatchesPage() {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase.from('batches').insert({
+      const res = await createBatchAction({
         name,
         description,
-        cefr_level: cefrLevel,
-        schedule_info: scheduleInfo,
-        zoom_link: zoomLink,
+        cefrLevel,
+        scheduleInfo,
+        zoomLink,
       });
 
-      if (error) throw error;
+      if (!res.success) throw new Error(res.error);
 
       toast.success('Batch created successfully!');
       setShowModal(false);
@@ -101,7 +99,7 @@ export default function BatchesPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <span className="px-2.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-mono font-bold">
-                    {batch.cefr_level} LEVEL
+                    {batch.cefrLevel} LEVEL
                   </span>
                   <span className="text-xs text-slate-500">
                     ID: {batch.id.substring(0, 8)}...
@@ -115,14 +113,14 @@ export default function BatchesPage() {
               <div className="space-y-2 border-t border-slate-800/80 pt-4 text-xs text-slate-300">
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-indigo-400" />
-                  <span>{batch.schedule_info || 'Schedule pending'}</span>
+                  <span>{batch.scheduleInfo || 'Schedule pending'}</span>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   <Video className="w-4 h-4 text-emerald-400" />
-                  {batch.zoom_link ? (
-                    <a href={batch.zoom_link} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline truncate">
-                      {batch.zoom_link}
+                  {batch.zoomLink ? (
+                    <a href={batch.zoomLink} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline truncate">
+                      {batch.zoomLink}
                     </a>
                   ) : (
                     <span className="text-slate-500">No Zoom link attached</span>

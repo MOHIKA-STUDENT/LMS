@@ -1,37 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { CourseMaterial } from '@/types/database';
+import { getMaterialsAction } from '@/app/actions/lms-actions';
 import { BookOpen, Download, FileText, File } from 'lucide-react';
 
 export default function StudentNotesPage() {
-  const [materials, setMaterials] = useState<CourseMaterial[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchNotes = async () => {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('batch_id')
-          .eq('id', user.id)
-          .single();
-
-        if (profile?.batch_id) {
-          const { data: mData } = await supabase
-            .from('course_materials')
-            .select('*')
-            .eq('batch_id', profile.batch_id)
-            .order('created_at', { ascending: false });
-
-          if (mData) setMaterials(mData);
-        }
+      const res = await getMaterialsAction();
+      if (res.success && res.materials) {
+        setMaterials(res.materials);
       }
       setLoading(false);
     };
@@ -68,18 +50,18 @@ export default function StudentNotesPage() {
                   </div>
                   <div>
                     <span className="px-2 py-0.5 bg-slate-800 text-indigo-300 border border-slate-700 rounded text-xs font-mono font-bold">
-                      {m.file_type.toUpperCase()}
+                      {(m.fileType || 'file').toUpperCase()}
                     </span>
                     <h3 className="font-bold text-white text-base mt-1">{m.title}</h3>
                   </div>
                 </div>
 
                 <p className="text-xs text-slate-400">{m.description || 'No additional details.'}</p>
-                <div className="text-xs text-slate-500">Size: {(m.file_size_bytes / (1024 * 1024)).toFixed(2)} MB</div>
+                <div className="text-xs text-slate-500">Size: {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB</div>
               </div>
 
               <a
-                href={m.file_url}
+                href={m.fileUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all"

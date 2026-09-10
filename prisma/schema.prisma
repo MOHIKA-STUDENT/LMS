@@ -1,0 +1,132 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+enum CEFRLevel {
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+}
+
+model Profile {
+  id          String   @id // Clerk User ID (user_...)
+  fullName    String
+  email       String   @unique
+  role        Role     @default(STUDENT)
+  batchId     String?
+  points      Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  batch               Batch?               @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  homeworkSubmissions HomeworkSubmission[]
+  quizSubmissions     QuizSubmission[]
+
+  @@map("profiles")
+}
+
+model Batch {
+  id           String    @id @default(uuid())
+  name         String
+  description  String?
+  cefrLevel    CEFRLevel @default(B1)
+  scheduleInfo String?
+  zoomLink     String?
+  createdAt    DateTime  @default(now())
+
+  profiles        Profile[]
+  courseMaterials CourseMaterial[]
+  assignments     Assignment[]
+  quizzes         Quiz[]
+
+  @@map("batches")
+}
+
+model CourseMaterial {
+  id            String   @id @default(uuid())
+  batchId       String
+  title         String
+  description   String?
+  fileUrl       String
+  fileType      String
+  fileSizeBytes Int
+  createdAt     DateTime @default(now())
+
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@map("course_materials")
+}
+
+model Assignment {
+  id          String   @id @default(uuid())
+  batchId     String
+  title       String
+  description String
+  dueDate     DateTime
+  createdAt   DateTime @default(now())
+
+  batch       Batch                @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  submissions HomeworkSubmission[]
+
+  @@map("assignments")
+}
+
+model HomeworkSubmission {
+  id                String   @id @default(uuid())
+  assignmentId      String
+  studentId         String
+  submissionText    String?
+  fileUrl           String?
+  aiProofreadReport Json?
+  teacherFeedback   String?
+  scoreAwarded      Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Profile    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("homework_submissions")
+}
+
+model Quiz {
+  id        String    @id @default(uuid())
+  batchId   String
+  title     String
+  cefrLevel CEFRLevel
+  topic     String
+  questions Json
+  createdAt DateTime  @default(now())
+
+  batch       Batch            @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  submissions QuizSubmission[]
+
+  @@map("quizzes")
+}
+
+model QuizSubmission {
+  id               String   @id @default(uuid())
+  quizId           String
+  studentId        String
+  score            Int
+  totalQuestions   Int      @default(5)
+  answersSubmitted Json
+  completedAt      DateTime @default(now())
+
+  quiz    Quiz    @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student Profile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_submissions")
+}
