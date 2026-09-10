@@ -101,7 +101,7 @@ ALTER TABLE homework_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quizzes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quiz_submissions ENABLE ROW LEVEL SECURITY;
 
--- Helper Function: Check if current user is a Teacher (Isolated SECURITY DEFINER with EXCEPTION Handling)
+-- Helper Function: Check if current user is a Teacher (Isolated SECURITY DEFINER)
 CREATE OR REPLACE FUNCTION public.is_teacher()
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -137,12 +137,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 DROP POLICY IF EXISTS "Teachers can manage all batches" ON batches;
 DROP POLICY IF EXISTS "Authenticated users can view batch info" ON batches;
 DROP POLICY IF EXISTS "Students can view their assigned batch" ON batches;
+DROP POLICY IF EXISTS "Teachers can insert batches" ON batches;
+DROP POLICY IF EXISTS "Teachers can update batches" ON batches;
+DROP POLICY IF EXISTS "Teachers can delete batches" ON batches;
 
 DROP POLICY IF EXISTS "Teachers can view and manage all profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can view profile names and points (for Leaderboard)" ON profiles;
 DROP POLICY IF EXISTS "Authenticated users can view profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile on signup" ON profiles;
+DROP POLICY IF EXISTS "Teachers can delete profiles" ON profiles;
 
 DROP POLICY IF EXISTS "Teachers can manage course materials" ON course_materials;
 DROP POLICY IF EXISTS "Students can view materials for their batch" ON course_materials;
@@ -164,32 +168,40 @@ DROP POLICY IF EXISTS "Students can submit quiz results" ON quiz_submissions;
 -- ------------------------------------------
 -- 1. BATCHES POLICIES
 -- ------------------------------------------
-CREATE POLICY "Teachers can manage all batches"
-  ON batches FOR ALL
-  USING (is_teacher());
-
 CREATE POLICY "Authenticated users can view batch info"
   ON batches FOR SELECT
   USING (auth.uid() IS NOT NULL);
 
--- ------------------------------------------
--- 2. PROFILES POLICIES
--- ------------------------------------------
-CREATE POLICY "Teachers can view and manage all profiles"
-  ON profiles FOR ALL
+CREATE POLICY "Teachers can insert batches"
+  ON batches FOR INSERT
+  WITH CHECK (is_teacher());
+
+CREATE POLICY "Teachers can update batches"
+  ON batches FOR UPDATE
   USING (is_teacher());
 
+CREATE POLICY "Teachers can delete batches"
+  ON batches FOR DELETE
+  USING (is_teacher());
+
+-- ------------------------------------------
+-- 2. PROFILES POLICIES (No recursion loop on SELECT)
+-- ------------------------------------------
 CREATE POLICY "Authenticated users can view profiles"
   ON profiles FOR SELECT
   USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can update their own profile"
   ON profiles FOR UPDATE
-  USING (id = auth.uid());
+  USING (id = auth.uid() OR is_teacher());
 
 CREATE POLICY "Users can insert their own profile on signup"
   ON profiles FOR INSERT
-  WITH CHECK (id = auth.uid());
+  WITH CHECK (id = auth.uid() OR is_teacher());
+
+CREATE POLICY "Teachers can delete profiles"
+  ON profiles FOR DELETE
+  USING (is_teacher());
 
 -- ------------------------------------------
 -- 3. COURSE MATERIALS POLICIES
