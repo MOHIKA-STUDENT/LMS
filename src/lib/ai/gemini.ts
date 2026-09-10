@@ -9,31 +9,69 @@ export function getGeminiClient() {
   return new GoogleGenAI({ apiKey });
 }
 
+export function sanitizeTopic(userPrompt: string): { cleanTopic: string; titleTopic: string } {
+  if (!userPrompt || !userPrompt.trim()) {
+    return { cleanTopic: 'English Tenses & Grammar', titleTopic: 'English Tenses & Grammar' };
+  }
+
+  let cleaned = userPrompt
+    .replace(/prepare\s+test\s+(for\s+student(s)?)?\s*(on|about)?/gi, '')
+    .replace(/make\s+(a\s+)?(test|quiz)\s+(on|about)?/gi, '')
+    .replace(/create\s+(a\s+)?(test|quiz)\s+(on|about)?/gi, '')
+    .replace(/cn\s+u\s+uise/gi, '')
+    .replace(/can\s+you\s+use/gi, '')
+    .replace(/simple\s+wordings?/gi, '')
+    .replace(/simple\s+english/gi, '')
+    .replace(/easy\s+wordings?/gi, '')
+    .replace(/for\s+beginners?/gi, '')
+    .replace(/with\s+explanations?/gi, '')
+    .trim();
+
+  // Remove leading/trailing punctuation/quotes
+  cleaned = cleaned.replace(/^["'\s:,.-]+|["'\s:,.-]+$/g, '').trim();
+
+  if (!cleaned || cleaned.length < 3) {
+    cleaned = 'English Tenses & Grammar';
+  }
+
+  const titleTopic = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  return { cleanTopic: cleaned, titleTopic };
+}
+
 export async function generateQuizWithGemini(
   topic: string,
   cefrLevel: string,
   customPrompt?: string
-): Promise<{ title: string; questions: QuizQuestion[] }> {
+): Promise<{ title: string; cleanTopic?: string; questions: QuizQuestion[] }> {
   const ai = getGeminiClient();
+  const { cleanTopic, titleTopic } = sanitizeTopic(topic);
 
   const combinedTopic = customPrompt && customPrompt.trim()
-    ? `${topic} (Topics: ${customPrompt.trim()})`
+    ? `${topic} (Additional notes: ${customPrompt.trim()})`
     : topic;
 
-  const promptText = `You are an expert English language tutor creating a CEFR-aligned quiz.
-Generate a 5-question multiple-choice English quiz for CEFR Level ${cefrLevel} focusing on: "${combinedTopic}".
+  const promptText = `You are a world-class AI English Master Tutor creating a professional, CEFR-aligned quiz.
+The teacher submitted this prompt/request: "${combinedTopic}".
+
+YOUR INSTRUCTIONS:
+1. Extract the TRUE learning concept (e.g., "Present & Past Tenses", "Business Vocabulary", "Third Conditionals").
+2. Create a clean, professional Quiz Title (e.g., "${cefrLevel} ${titleTopic} Mastery Quiz").
+3. Generate 5 multiple-choice questions aligned with CEFR Level ${cefrLevel}.
+4. IMPORTANT: Questions must be clean, natural, and test the student's English ability directly.
+   DO NOT COPY raw teacher prompt instructions (such as "prepare test for student on tenses cn u uise simple wordings") into question text, title, or options.
 
 STRICT OUTPUT REQUIREMENT:
 Respond ONLY with syntactically valid JSON matching this exact TypeScript structure:
 {
-  "title": "${cefrLevel} Quiz: ${topic}",
+  "title": "${cefrLevel} ${titleTopic} Quiz",
+  "cleanTopic": "${titleTopic}",
   "questions": [
     {
       "id": 1,
-      "question": "Question text here",
+      "question": "Question text testing the concept",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctAnswerIndex": 0,
-      "explanation": "Clear step-by-step explanation of why this answer is correct and why other options are incorrect."
+      "explanation": "Clear step-by-step explanation of why this answer is correct."
     }
   ]
 }
@@ -54,7 +92,11 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
 
         const parsed = JSON.parse(rawText);
         if (parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-          return parsed;
+          return {
+            title: parsed.title || `${cefrLevel} ${titleTopic} Quiz`,
+            cleanTopic: parsed.cleanTopic || titleTopic,
+            questions: parsed.questions,
+          };
         }
       } catch (err) {
         console.warn(`Gemini model ${modelName} attempt notice:`, err);
@@ -62,14 +104,15 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
     }
   }
 
-  // Smart Fail-Safe Fallback Generator (Guarantees quiz creation even if API key is rate-limited or offline)
-  console.log('Using Smart Fallback Quiz Generator for:', topic);
+  // Smart Fail-Safe Fallback Generator with clean wording
+  console.log('Using Smart Fallback Quiz Generator for:', titleTopic);
   return {
-    title: `${cefrLevel} Mastery Quiz: ${topic}`,
+    title: `${cefrLevel} ${titleTopic} Mastery Quiz`,
+    cleanTopic: titleTopic,
     questions: [
       {
         id: 1,
-        question: `In the context of ${topic} (${cefrLevel}), which sentence demonstrates correct grammar and usage?`,
+        question: `Which sentence correctly demonstrates English verb tenses for CEFR ${cefrLevel}?`,
         options: [
           `She had already finished her assignment when the tutor arrived.`,
           `She finish her assignment when tutor arrive yesterday.`,
@@ -81,7 +124,7 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
       },
       {
         id: 2,
-        question: `Select the most appropriate vocabulary term related to "${topic}":`,
+        question: `Select the most appropriate vocabulary term related to "${titleTopic}":`,
         options: [
           `Comprehensive`,
           `Incomprehensibly`,
@@ -100,7 +143,7 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
       },
       {
         id: 4,
-        question: `Identify the sentence with correct word order for ${topic}:`,
+        question: `Identify the sentence with correct word order for ${titleTopic}:`,
         options: [
           `Hardly had the lesson started when the student asked a question.`,
           `Hardly the lesson had started when asked the student.`,
@@ -112,7 +155,7 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
       },
       {
         id: 5,
-        question: `Choose the correct conditional form regarding "${topic}":`,
+        question: `Choose the correct conditional sentence structure regarding "${titleTopic}":`,
         options: [
           `If you practice daily, your fluency will improve significantly.`,
           `If you practiced daily, your fluency will improve.`,
@@ -126,31 +169,34 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
   };
 }
 
-export async function proofreadHomeworkWithGemini(text: string, assignmentTitle: string): Promise<AIProofreadReport> {
+export async function proofreadHomeworkWithGemini(
+  text: string,
+  assignmentTitle: string
+): Promise<AIProofreadReport> {
   const ai = getGeminiClient();
-  const prompt = `You are a friendly, encouraging English Tutor proofreading a student's homework submission for: "${assignmentTitle}".
+  const promptText = `You are an expert English language proofreader and writing coach.
+Analyze the following student submission for the assignment "${assignmentTitle}":
 
-Student Submission:
-"""
-${text}
-"""
+"${text}"
 
-STRICT OUTPUT REQUIREMENT:
-Respond ONLY with syntactically valid JSON matching this exact structure:
+Provide detailed, constructive feedback in syntactically valid JSON matching this exact TypeScript interface:
 {
-  "grammar_score": 88,
+  "grammarScore": number (0 to 100),
+  "vocabularyScore": number (0 to 100),
+  "coherenceScore": number (0 to 100),
+  "overallScore": number (0 to 100),
   "corrections": [
     {
-      "original": "Text snippet with error",
-      "suggestion": "Corrected text snippet",
-      "reason": "Grammatical explanation"
+      "original": "original phrase with error",
+      "correction": "corrected phrase",
+      "reason": "explanation of grammatical rule"
     }
   ],
-  "overall_feedback": "Great effort! Your vocabulary choice was strong. Pay attention to subject-verb agreement.",
-  "improved_version": "Polished text version."
+  "improvedVersion": "fully polished and corrected version of the student submission",
+  "suggestions": ["3-4 actionable tips for improvement"]
 }
 
-DO NOT include markdown code blocks. Output raw valid JSON only.`;
+Output raw valid JSON only. No markdown code blocks, backticks, or text before/after JSON.`;
 
   if (ai) {
     const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
@@ -158,33 +204,29 @@ DO NOT include markdown code blocks. Output raw valid JSON only.`;
       try {
         const response = await ai.models.generateContent({
           model: modelName,
-          contents: prompt,
+          contents: promptText,
         });
 
         let rawText = response.text?.trim() || '';
         rawText = rawText.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
-
-        const parsed: AIProofreadReport = JSON.parse(rawText);
-        if (parsed && typeof parsed.grammar_score === 'number') {
-          return parsed;
-        }
+        return JSON.parse(rawText);
       } catch (err) {
-        console.warn(`Gemini proofread model ${modelName} notice:`, err);
+        console.warn(`Gemini proofread attempt on ${modelName}:`, err);
       }
     }
   }
 
-  // Fail-Safe Fallback Proofread Report
+  // Fallback Proofread Report if API key missing or offline
   return {
-    grammar_score: 90,
+    grammar_score: 85,
     corrections: [
       {
         original: text.slice(0, 30),
         suggestion: text.slice(0, 30),
-        reason: 'Proper sentence structure maintained.'
-      }
+        reason: 'Good overall sentence structure and clarity.',
+      },
     ],
-    overall_feedback: `Well done on completing "${assignmentTitle}". Your essay shows strong ideas and good effort!`,
-    improved_version: text
+    overall_feedback: 'Well-structured assignment with clear ideas.',
+    improved_version: text,
   };
 }

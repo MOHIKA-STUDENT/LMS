@@ -494,17 +494,23 @@ export default function QuizGenPage() {
               {!isGlobal && (
                 <div className="flex items-center space-x-2">
                   <label className="text-xs text-theme-sub font-semibold uppercase">Target Batch:</label>
-                  <select
-                    value={targetBatchId}
-                    onChange={(e) => setTargetBatchId(e.target.value)}
-                    className="px-3 py-1.5 bg-theme-input border border-theme rounded-lg text-theme-main text-xs"
-                  >
-                    {batches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} ({b.cefrLevel})
-                      </option>
-                    ))}
-                  </select>
+                  {batches.length === 0 ? (
+                    <span className="text-xs text-amber-500 font-semibold italic bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/30">
+                      No batches found (Create a batch first)
+                    </span>
+                  ) : (
+                    <select
+                      value={targetBatchId}
+                      onChange={(e) => setTargetBatchId(e.target.value)}
+                      className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-indigo-500/40 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[180px] shadow-sm"
+                    >
+                      {batches.map((b) => (
+                        <option key={b.id} value={b.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium py-1">
+                          {b.name} ({b.cefrLevel})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
             </div>

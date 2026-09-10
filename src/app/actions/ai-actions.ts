@@ -2,7 +2,7 @@
 
 import { currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db/prisma';
-import { generateQuizWithGemini, proofreadHomeworkWithGemini } from '@/lib/ai/gemini';
+import { generateQuizWithGemini, proofreadHomeworkWithGemini, sanitizeTopic } from '@/lib/ai/gemini';
 import { CEFRLevel } from '@prisma/client';
 
 export async function generateQuizAction(
@@ -21,12 +21,13 @@ export async function generateQuizAction(
     }
 
     const quizData = await generateQuizWithGemini(userPrompt, cefrLevel as any);
+    const { titleTopic } = sanitizeTopic(userPrompt);
 
     return {
       success: true,
       quizDraft: {
         title: quizData.title,
-        topic: userPrompt,
+        topic: quizData.cleanTopic || titleTopic || 'English Practice',
         cefrLevel,
         questions: quizData.questions,
       },

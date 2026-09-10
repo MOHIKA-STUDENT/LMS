@@ -16,17 +16,17 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between">
-      <header className="container mx-auto px-4 h-20 flex items-center justify-between">
-        <div className="flex items-center space-x-2 font-extrabold text-xl text-indigo-400">
+    <div className="min-h-screen bg-theme-main text-theme-main flex flex-col justify-between transition-colors duration-200">
+      <header className="container mx-auto px-4 h-20 flex items-center justify-between border-b border-theme">
+        <div className="flex items-center space-x-2 font-extrabold text-xl text-indigo-500">
           <BookOpen className="w-8 h-8 text-indigo-500" />
-          <span>English<span className="text-white">Academy</span> LMS</span>
+          <span>English<span className="text-theme-main">Academy</span> LMS</span>
         </div>
 
         <div className="flex items-center space-x-3">
           <Link
             href="/login"
-            className="px-4 py-2 text-sm font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 rounded-xl transition-all"
+            className="px-4 py-2 text-sm font-semibold text-theme-sub hover:text-theme-main bg-theme-card-sub border border-theme rounded-xl transition-all"
           >
             Sign In
           </Link>
@@ -40,16 +40,16 @@ export default async function HomePage() {
       </header>
 
       <main className="container mx-auto px-4 py-16 text-center max-w-4xl space-y-8">
-        <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-indigo-300 text-xs font-semibold">
-          <Sparkles className="w-4 h-4 text-indigo-400" />
-          <span>Next.js 14 • Clerk Auth • Neon PostgreSQL • Cloudinary • Gemini AI</span>
+        <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-indigo-600 dark:text-indigo-300 text-xs font-semibold">
+          <Sparkles className="w-4 h-4 text-indigo-500" />
+          <span>Next.js 16 • Clerk Auth • Neon PostgreSQL • Cloudinary • Gemini AI</span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight">
-          Enterprise Learning Management System for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">English Tutors</span>
+        <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight text-theme-main">
+          Enterprise Learning Management System for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">English Tutors</span>
         </h1>
 
-        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+        <p className="text-theme-sub text-base sm:text-lg max-w-2xl mx-auto">
           Manage student batches, generate Gemini AI CEFR quizzes, proofread homework assignments, schedule live Zoom classes, and sync offline seamlessly.
         </p>
 
@@ -63,14 +63,14 @@ export default async function HomePage() {
           </Link>
           <Link
             href="/login"
-            className="w-full sm:w-auto px-8 py-4 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 font-bold rounded-2xl flex items-center justify-center space-x-2 text-base transition-all"
+            className="w-full sm:w-auto px-8 py-4 bg-theme-card-sub border border-theme hover:opacity-90 text-theme-main font-bold rounded-2xl flex items-center justify-center space-x-2 text-base transition-all"
           >
             <span>Access Portal</span>
           </Link>
         </div>
       </main>
 
-      <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-600">
+      <footer className="border-t border-theme py-6 text-center text-xs text-theme-sub">
         © 2026 English Tutors Academy. 100% Free-Tier Architecture.
       </footer>
     </div>
