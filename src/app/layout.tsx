@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from 'sonner';
 import './globals.css';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -12,7 +14,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'English Tutors Academy LMS',
-  description: 'Enterprise Offline-First LMS with Clerk Auth, Neon PostgreSQL, Cloudinary CDN, and Gemini AI',
+  description: 'Enterprise Offline-First Learning Management System for English Tutors, Academies, and Language Schools.',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -30,8 +32,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { ThemeProvider } from '@/components/ThemeProvider';
-
 export default function RootLayout({
   children,
 }: {
@@ -42,6 +42,7 @@ export default function RootLayout({
       <html lang="en" className="dark">
         <body className={`${inter.className} min-h-screen bg-theme-main text-theme-main antialiased transition-colors duration-200`}>
           <ThemeProvider>
+            <ServiceWorkerRegister />
             {children}
             <Toaster position="top-right" theme="dark" richColors />
           </ThemeProvider>
