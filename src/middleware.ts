@@ -31,35 +31,34 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  try {
-    const { userId, sessionClaims } = await auth();
+  // 1. If route is NOT public, protect it with Clerk auth.protect()
+  if (!isPublicRoute(req)) {
+    await auth.protect();
+  } else {
+    // 2. If logged in and visiting landing/login/register, auto-redirect to appropriate role dashboard
+    try {
+      const { userId, sessionClaims } = await auth();
+      if (userId) {
+        const role =
+          (sessionClaims?.metadata as any)?.role ||
+          (sessionClaims?.publicMetadata as any)?.role ||
+          (sessionClaims?.unsafeMetadata as any)?.role ||
+          (sessionClaims as any)?.role;
 
-    // If trying to access protected route without logging in
-    if (!isPublicRoute(req) && !userId) {
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
-
-    if (userId) {
-      // Check session claims for role if available
-      const role =
-        (sessionClaims?.metadata as any)?.role ||
-        (sessionClaims?.publicMetadata as any)?.role ||
-        (sessionClaims?.unsafeMetadata as any)?.role ||
-        (sessionClaims as any)?.role;
-
-      // Auto-redirect from login/register/home if already signed in
-      if (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/register' || req.nextUrl.pathname === '/') {
-        if (role === 'TEACHER') {
-          return NextResponse.redirect(new URL('/admin/batches', req.url));
-        } else {
-          return NextResponse.redirect(new URL('/student/timeline', req.url));
+        if (
+          req.nextUrl.pathname === '/login' ||
+          req.nextUrl.pathname === '/register' ||
+          req.nextUrl.pathname === '/'
+        ) {
+          if (role === 'TEACHER') {
+            return NextResponse.redirect(new URL('/admin/batches', req.url));
+          } else {
+            return NextResponse.redirect(new URL('/student/timeline', req.url));
+          }
         }
       }
-    }
-  } catch (err) {
-    console.warn('Middleware execution notice:', err);
-    if (!isPublicRoute(req)) {
-      return NextResponse.redirect(new URL('/login', req.url));
+    } catch (err) {
+      console.warn('Middleware public route notice:', err);
     }
   }
 
@@ -68,7 +67,7 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    '/((?!_next|manifest\\.json|favicon\\.ico|[^?]*\\.(?:html?|css|js(?!on)|json|jwt|png|jpg|jpeg|gif|webp|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/((?!_next|manifest\\.json|favicon\\.ico|sw\\.js|[^?]*\\.(?:html?|css|js(?!on)|json|jwt|png|jpg|jpeg|gif|webp|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|pdf|webmanifest)).*)',
     '/(api|trpc)(.*)',
   ],
 };
