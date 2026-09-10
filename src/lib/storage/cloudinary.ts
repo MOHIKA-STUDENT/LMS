@@ -24,13 +24,16 @@ export async function uploadToCloudinary(
   try {
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
     const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const publicId = `${Date.now()}_${nameWithoutExt}`;
+    const isRaw = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'txt'].includes(ext);
+
+    // For raw files (docx, pptx, etc.), public_id needs the extension. For images/pdf, Cloudinary handles format.
+    const publicId = isRaw ? `${Date.now()}_${nameWithoutExt}.${ext}` : `${Date.now()}_${nameWithoutExt}`;
 
     return new Promise((resolve) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `english-lms/${folder}`,
-          resource_type: ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip'].includes(ext) ? 'raw' : 'auto',
+          resource_type: isRaw ? 'raw' : 'image',
           public_id: publicId,
         },
         (error, result) => {
@@ -40,7 +43,10 @@ export async function uploadToCloudinary(
               error: error?.message || 'Failed to upload to Cloudinary CDN.',
             });
           } else {
-            const finalUrl = result.secure_url;
+            let finalUrl = result.secure_url;
+            if (ext === 'pdf' && finalUrl.includes('/image/upload/')) {
+              finalUrl = finalUrl.replace('/image/upload/', '/image/upload/f_jpg/');
+            }
             resolve({
               success: true,
               url: finalUrl,
@@ -59,4 +65,19 @@ export async function uploadToCloudinary(
       error: err.message || 'Cloudinary upload failed.',
     };
   }
+}
+
+export function formatCloudinaryFileUrl(url: string | null | undefined): string {
+  if (!url) return '#';
+  let cleanUrl = url;
+
+  // Fix legacy double extension corruptions
+  cleanUrl = cleanUrl.replace(/\.pdf\.pdf$/i, '.pdf').replace(/\.pdf\.jpg$/i, '.pdf');
+
+  // Inject f_jpg transformation for Cloudinary PDF image URLs if missing, to bypass Cloudinary 401 PDF restrictions
+  if (cleanUrl.includes('/image/upload/') && !cleanUrl.includes('/f_jpg/')) {
+    cleanUrl = cleanUrl.replace('/image/upload/', '/image/upload/f_jpg/');
+  }
+
+  return cleanUrl;
 }

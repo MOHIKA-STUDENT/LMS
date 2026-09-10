@@ -2,7 +2,7 @@
 
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db/prisma';
-import { uploadToCloudinary } from '@/lib/storage/cloudinary';
+import { uploadToCloudinary, formatCloudinaryFileUrl } from '@/lib/storage/cloudinary';
 import { CEFRLevel, Role } from '@prisma/client';
 
 // ==========================================
@@ -293,7 +293,7 @@ export async function getMaterialsAction(batchId?: string) {
 
     const sanitizedMaterials = materials.map((m) => ({
       ...m,
-      fileUrl: m.fileUrl ? m.fileUrl.replace(/\.pdf\.jpg$/i, '.pdf').replace(/\.pdf\.pdf$/i, '.pdf') : m.fileUrl,
+      fileUrl: formatCloudinaryFileUrl(m.fileUrl),
     }));
 
     return { success: true, materials: sanitizedMaterials };
@@ -410,7 +410,7 @@ export async function getSubmissionsAction() {
 
     const sanitizedSubmissions = submissions.map((sub) => ({
       ...sub,
-      fileUrl: sub.fileUrl ? sub.fileUrl.replace(/\.pdf\.jpg$/i, '.pdf').replace(/\.pdf\.pdf$/i, '.pdf') : sub.fileUrl,
+      fileUrl: formatCloudinaryFileUrl(sub.fileUrl),
     }));
 
     return { success: true, submissions: sanitizedSubmissions };

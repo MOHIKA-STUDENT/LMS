@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getMaterialsAction } from '@/app/actions/lms-actions';
+import { formatCloudinaryFileUrl } from '@/lib/storage/cloudinary';
 import { BookOpen, Download, FileText, File, Eye, X } from 'lucide-react';
 
 export default function StudentNotesPage() {
@@ -46,7 +47,7 @@ export default function StudentNotesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {materials.map((m) => {
             const fileType = (m.fileType || 'file').toLowerCase();
-            const fileUrl = (m.fileUrl || '#').replace(/\.pdf\.jpg$/i, '.pdf').replace(/\.pdf\.pdf$/i, '.pdf');
+            const fileUrl = formatCloudinaryFileUrl(m.fileUrl);
             const isPdf = fileType === 'pdf' || fileUrl.toLowerCase().endsWith('.pdf');
             const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType);
             const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;

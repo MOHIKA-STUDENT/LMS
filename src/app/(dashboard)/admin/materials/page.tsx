@@ -9,6 +9,7 @@ import {
   deleteMaterialAction,
 } from '@/app/actions/lms-actions';
 import { processAndValidateFileUpload } from '@/lib/utils/asset-shield';
+import { formatCloudinaryFileUrl } from '@/lib/storage/cloudinary';
 import { BookOpen, UploadCloud, FileText, Trash2, Download, Eye, Edit3, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -271,7 +272,7 @@ export default function MaterialsPage() {
             {materials.map((m) => {
               const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'Unknown Batch');
               const fileType = (m.fileType || 'file').toLowerCase();
-              const fileUrl = (m.fileUrl || '#').replace(/\.pdf\.jpg$/i, '.pdf').replace(/\.pdf\.pdf$/i, '.pdf');
+              const fileUrl = formatCloudinaryFileUrl(m.fileUrl);
               const isPdf = fileType === 'pdf' || fileUrl.toLowerCase().endsWith('.pdf');
               const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType);
               const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
