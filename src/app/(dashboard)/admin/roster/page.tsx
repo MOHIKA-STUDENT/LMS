@@ -8,6 +8,7 @@ import {
   updateStudentAccessAction,
   deleteStudentAction,
 } from '@/app/actions/lms-actions';
+import { formatStudentDisplayName } from '@/lib/utils/format-name';
 import { Users, Award, Shield, CheckCircle2, Edit, Trash2, UserX, UserCheck, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -154,10 +155,10 @@ export default function RosterPage() {
                   <tr key={student.id} className="hover:bg-slate-800/40 transition-colors">
                     <td className="px-6 py-4 font-semibold text-white flex items-center space-x-3">
                       <div className="w-9 h-9 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold">
-                        {(student.fullName || 'S').charAt(0).toUpperCase()}
+                        {formatStudentDisplayName(student.fullName, student.email).charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div>{student.fullName}</div>
+                        <div>{formatStudentDisplayName(student.fullName, student.email)}</div>
                         <div className="text-[11px] text-slate-500 font-normal">{student.role}</div>
                       </div>
                     </td>

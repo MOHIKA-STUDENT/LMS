@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getStudentProfileAction } from '@/app/actions/lms-actions';
 import { Calendar, Video, ExternalLink, Clock, Award, BookOpen } from 'lucide-react';
-import { toast } from 'sonner';
+import { formatStudentDisplayName } from '@/lib/utils/format-name';
 
 export default function StudentTimelinePage() {
   const [profile, setProfile] = useState<any | null>(null);
@@ -24,6 +24,8 @@ export default function StudentTimelinePage() {
     fetchStudentData();
   }, []);
 
+  const displayName = formatStudentDisplayName(profile?.fullName, profile?.email);
+
   return (
     <div className="space-y-6">
       {/* Student Welcome Header */}
@@ -33,7 +35,7 @@ export default function StudentTimelinePage() {
             STUDENT PORTAL
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">
-            Welcome back, {profile?.fullName || 'Student'}! 👋
+            Welcome back, {displayName}! 👋
           </h1>
           <p className="text-sm text-slate-300 mt-1">
             Batch: <span className="font-semibold text-indigo-300">{batch?.name || 'Unassigned Batch'}</span> ({batch?.cefrLevel || 'CEFR Level Pending'})

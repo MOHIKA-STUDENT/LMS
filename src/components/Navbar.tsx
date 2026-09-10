@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton, useUser } from '@clerk/nextjs';
 import { Profile } from '@/types/database';
+import { formatStudentDisplayName } from '@/lib/utils/format-name';
 import { useTheme } from '@/components/ThemeProvider';
 import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LayoutDashboard, CheckSquare, Settings, Video, CreditCard, UserCheck, Sun, Moon } from 'lucide-react';
 
@@ -20,10 +21,10 @@ export default function Navbar({ profile }: NavbarProps) {
   const isTeacher = role === 'TEACHER';
 
   // Compute clean display name (never raw email)
-  const rawEmail = user?.primaryEmailAddress?.emailAddress || '';
-  const emailPrefix = rawEmail ? rawEmail.split('@')[0] : 'User';
-  const formattedPrefix = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-  const displayName = profile?.fullName || user?.fullName || user?.firstName || formattedPrefix;
+  const displayName = formatStudentDisplayName(
+    profile?.fullName || user?.fullName || user?.firstName,
+    user?.primaryEmailAddress?.emailAddress
+  );
 
   const teacherLinks = [
     { href: '/admin/batches', label: 'Batches', icon: LayoutDashboard },
