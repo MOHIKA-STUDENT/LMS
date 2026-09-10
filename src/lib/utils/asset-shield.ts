@@ -1,5 +1,3 @@
-import imageCompression from 'browser-image-compression';
-
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export interface FileValidationResult {
@@ -19,9 +17,10 @@ export async function processAndValidateFileUpload(file: File): Promise<FileVali
 
   let finalFile = file;
 
-  // Compress images automatically if they are raw images
-  if (file.type.startsWith('image/')) {
+  // Compress images automatically if in browser environment
+  if (typeof window !== 'undefined' && file.type.startsWith('image/')) {
     try {
+      const imageCompression = (await import('browser-image-compression')).default;
       const options = {
         maxSizeMB: 1, // Compress image to <= 1MB
         maxWidthOrHeight: 1920,
