@@ -22,8 +22,8 @@ export default async function HomePage() {
       <header className="container mx-auto px-3 sm:px-4 h-16 sm:h-20 flex items-center justify-between border-b border-theme gap-1 sm:gap-2">
         <div className="flex items-center space-x-1 sm:space-x-2 font-extrabold text-sm sm:text-xl text-indigo-500 shrink-0">
           <BookOpen className="w-5 h-5 sm:w-8 sm:h-8 text-indigo-500 shrink-0" />
-          <span className="truncate max-w-[130px] sm:max-w-none">
-            English<span className="text-theme-main">Academy</span>
+          <span className="truncate max-w-[140px] sm:max-w-none">
+            Vedayan<span className="text-theme-main"> LMS</span>
           </span>
         </div>
 
@@ -52,7 +52,7 @@ export default async function HomePage() {
         </div>
 
         <h1 className="text-3xl sm:text-6xl font-black tracking-tight leading-tight text-theme-main">
-          Enterprise Learning Management System for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">English Tutors</span>
+          Enterprise Learning Management System by <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">Vedayan</span>
         </h1>
 
         <p className="text-theme-sub text-sm sm:text-lg max-w-2xl mx-auto px-2">
@@ -78,7 +78,7 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-theme py-6 text-center text-xs text-theme-sub">
-        © 2026 English Tutors Academy. 100% Free-Tier Architecture.
+        © 2026 Vedayan LMS. 100% Enterprise-Grade Architecture.
       </footer>
     </div>
   );

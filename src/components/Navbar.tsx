@@ -113,7 +113,7 @@ export default function Navbar({ profile }: NavbarProps) {
           >
             <BookOpen className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-500" />
             <span>
-              English<span className="text-theme-main">Academy</span>
+              Vedayan<span className="text-theme-main"> LMS</span>
             </span>
           </Link>
 

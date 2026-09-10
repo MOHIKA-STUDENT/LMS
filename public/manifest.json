@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "short_name": "Academy LMS",
-  "name": "English Academy LMS",
-  "description": "Enterprise Offline-First Learning Management System for English Tutors, Academies, and Language Schools.",
+  "short_name": "Vedayan LMS",
+  "name": "Vedayan LMS",
+  "description": "Enterprise Offline-First Learning Management System by Vedayan for English Tutors, Academies, and Language Schools.",
   "categories": ["education", "productivity"],
   "icons": [
     {
@@ -24,14 +24,14 @@
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "English Academy LMS Mobile View"
+      "label": "Vedayan LMS Mobile View"
     },
     {
       "src": "/screenshot-desktop.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "English Academy LMS Desktop View"
+      "label": "Vedayan LMS Desktop View"
     }
   ],
   "serviceworker": {

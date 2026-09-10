@@ -13,8 +13,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'English Tutors Academy LMS',
-  description: 'Enterprise Offline-First Learning Management System for English Tutors, Academies, and Language Schools.',
+  title: 'Vedayan LMS — Enterprise Learning Platform',
+  description: 'Enterprise Offline-First Learning Management System by Vedayan for English Tutors, Academies, and Language Schools.',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Academy LMS',
+    title: 'Vedayan LMS',
   },
 };
 
