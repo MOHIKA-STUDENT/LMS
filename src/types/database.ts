@@ -18,6 +18,7 @@ export interface Profile {
   role: UserRole;
   batch_id: string | null;
   points: number;
+  is_active: boolean;
   created_at: string;
   batches?: Batch | null;
 }

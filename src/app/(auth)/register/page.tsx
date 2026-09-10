@@ -53,6 +53,17 @@ export default function RegisterPage() {
       }
 
       if (data.user) {
+        // Explicitly create/update profile to guarantee role persistence
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          full_name: fullName,
+          email: email,
+          role: role,
+          batch_id: role === 'STUDENT' && batchId ? batchId : null,
+          points: 0,
+          is_active: true,
+        });
+
         toast.success('Account created successfully!');
         if (role === 'TEACHER') {
           router.push('/admin/batches');

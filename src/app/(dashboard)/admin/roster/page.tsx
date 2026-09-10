@@ -3,13 +3,22 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Batch } from '@/types/database';
-import { Users, Award, Shield, CheckCircle2 } from 'lucide-react';
+import { Users, Award, Shield, CheckCircle2, Edit, Trash2, UserX, UserCheck, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function RosterPage() {
   const [students, setStudents] = useState<Profile[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Edit Modal State
+  const [editingStudent, setEditingStudent] = useState<Profile | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editBatchId, setEditBatchId] = useState('');
+  const [saving, setSaving] = useState(false);
+
   const supabase = createClient();
 
   const fetchData = async () => {
@@ -48,14 +57,100 @@ export default function RosterPage() {
     }
   };
 
+  const handleToggleAccess = async (student: Profile) => {
+    const newStatus = !student.is_active;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: newStatus })
+      .eq('id', student.id);
+
+    if (error) {
+      toast.error('Failed to update access status.');
+    } else {
+      toast.success(`Access ${newStatus ? 'granted' : 'suspended'} for ${student.full_name}.`);
+      fetchData();
+    }
+  };
+
+  const handleDeleteStudent = async (student: Profile) => {
+    if (!confirm(`Are you sure you want to remove student "${student.full_name}" from the academy? This action cannot be undone.`)) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', student.id);
+
+    if (error) {
+      toast.error('Failed to remove student profile.');
+    } else {
+      toast.success(`Student ${student.full_name} removed.`);
+      fetchData();
+    }
+  };
+
+  const openEditModal = (student: Profile) => {
+    setEditingStudent(student);
+    setEditName(student.full_name);
+    setEditEmail(student.email);
+    setEditBatchId(student.batch_id || '');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editName,
+          email: editEmail,
+          batch_id: editBatchId === '' ? null : editBatchId,
+        })
+        .eq('id', editingStudent.id);
+
+      if (error) throw error;
+
+      toast.success('Student details updated successfully!');
+      setEditingStudent(null);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update student.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredStudents = students.filter((s) =>
+    s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-          <Users className="w-7 h-7 text-indigo-400" />
-          <span>Student Roster & Batch Manager</span>
-        </h1>
-        <p className="text-sm text-slate-400 mt-1">Assign enrolled students to custom batches and track total earned points</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
+            <Users className="w-7 h-7 text-indigo-400" />
+            <span>Student Roster & Permissions Manager</span>
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">Manage student accounts, edit details, assign batches, toggle portal permissions, or remove students</p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative w-full sm:w-64">
+          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Search students..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -68,29 +163,42 @@ export default function RosterPage() {
                 <tr>
                   <th className="px-6 py-4">Student Name</th>
                   <th className="px-6 py-4">Email</th>
-                  <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Status & Access</th>
                   <th className="px-6 py-4">Assigned Batch</th>
-                  <th className="px-6 py-4 text-right">Points</th>
+                  <th className="px-6 py-4">Points</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {students.map((student) => (
+                {filteredStudents.map((student) => (
                   <tr key={student.id} className="hover:bg-slate-800/40 transition-colors">
                     <td className="px-6 py-4 font-semibold text-white flex items-center space-x-3">
                       <div className="w-9 h-9 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold">
                         {student.full_name.charAt(0).toUpperCase()}
                       </div>
-                      <span>{student.full_name}</span>
+                      <div>
+                        <div>{student.full_name}</div>
+                        <div className="text-[11px] text-slate-500 font-normal">{student.role}</div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-slate-400 font-mono text-xs">{student.email}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        student.role === 'TEACHER'
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        student.is_active !== false
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                       }`}>
-                        {student.role === 'TEACHER' ? <Shield className="w-3 h-3 mr-1" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
-                        {student.role}
+                        {student.is_active !== false ? (
+                          <>
+                            <UserCheck className="w-3 h-3 mr-1 text-emerald-400" />
+                            <span>Active</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="w-3 h-3 mr-1 text-rose-400" />
+                            <span>Suspended</span>
+                          </>
+                        )}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -111,16 +219,113 @@ export default function RosterPage() {
                         <span className="text-xs text-slate-500">N/A (Teacher)</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-amber-400 font-mono">
-                      <span className="inline-flex items-center space-x-1">
-                        <Award className="w-4 h-4 text-amber-400" />
-                        <span>{student.points} pts</span>
-                      </span>
+                    <td className="px-6 py-4 font-bold text-amber-400 font-mono text-xs">
+                      {student.points} pts
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button
+                        onClick={() => openEditModal(student)}
+                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                        title="Edit Student Details"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleAccess(student)}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          student.is_active !== false
+                            ? 'text-amber-400 hover:bg-slate-800'
+                            : 'text-emerald-400 hover:bg-slate-800'
+                        }`}
+                        title={student.is_active !== false ? 'Suspend Access' : 'Grant Access'}
+                      >
+                        {student.is_active !== false ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteStudent(student)}
+                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
+                        title="Remove Student"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {editingStudent && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">Edit Student Profile</h2>
+              <button onClick={() => setEditingStudent(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assigned Batch</label>
+                <select
+                  value={editBatchId}
+                  onChange={(e) => setEditBatchId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">-- No Batch --</option>
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.cefr_level})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

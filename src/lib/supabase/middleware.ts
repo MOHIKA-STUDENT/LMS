@@ -69,14 +69,20 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    // Query role from profiles table
+    // Query role and active status from profiles table
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_active')
       .eq('id', user.id)
       .single();
 
-    const role = profile?.role || 'STUDENT';
+    // Check if account has been suspended by a teacher
+    if (profile && profile.is_active === false) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL('/login?error=account_suspended', request.url));
+    }
+
+    const role = profile?.role || user.user_metadata?.role || 'STUDENT';
 
     // Strict Role Guards
     if (pathname.startsWith('/admin') && role !== 'TEACHER') {

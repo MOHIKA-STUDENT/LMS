@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   role TEXT CHECK (role IN ('TEACHER', 'STUDENT')) NOT NULL DEFAULT 'STUDENT',
   batch_id UUID REFERENCES batches(id) ON DELETE SET NULL,
   points INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

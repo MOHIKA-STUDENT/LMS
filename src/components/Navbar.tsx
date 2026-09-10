@@ -76,13 +76,31 @@ export default function Navbar({ profile }: NavbarProps) {
 
         {/* User Info & Actions */}
         <div className="flex items-center space-x-3">
-          {profile && (
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-sm font-semibold text-slate-200">{profile.full_name}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-indigo-400 font-mono font-medium border border-indigo-500/20">
-                {profile.role} {profile.role === 'STUDENT' && `• ${profile.points} pts`}
-              </span>
+          {profile ? (
+            <div className="flex items-center space-x-3">
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-sm font-semibold text-slate-200">
+                  {profile.full_name || profile.email}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-indigo-400 font-mono font-medium border border-indigo-500/20">
+                  {profile.role} {profile.role === 'STUDENT' && `• ${profile.points} pts`}
+                </span>
+              </div>
             </div>
+          ) : (
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-xs text-slate-400">Authenticated User</span>
+            </div>
+          )}
+
+          {!isTeacher && (
+            <Link
+              href="/student/settings"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-xs font-semibold"
+              title="Account Settings"
+            >
+              Settings
+            </Link>
           )}
 
           <button
