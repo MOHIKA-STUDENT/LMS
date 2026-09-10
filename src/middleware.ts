@@ -34,28 +34,16 @@ export default clerkMiddleware(async (auth, req) => {
     }
 
     if (userId) {
-      // Check session claims for role
+      // Check session claims for role if available
       const role =
         (sessionClaims?.metadata as any)?.role ||
         (sessionClaims?.publicMetadata as any)?.role ||
         (sessionClaims?.unsafeMetadata as any)?.role ||
         (sessionClaims as any)?.role;
 
-      const userRole = role === 'TEACHER' ? 'TEACHER' : 'STUDENT';
-
-      // Block non-teachers from reaching /admin
-      if (isAdminRoute(req) && userRole !== 'TEACHER') {
-        return NextResponse.redirect(new URL('/student/timeline', req.url));
-      }
-
-      // Block non-students from reaching /student
-      if (isStudentRoute(req) && userRole === 'TEACHER') {
-        return NextResponse.redirect(new URL('/admin/batches', req.url));
-      }
-
       // Auto-redirect from login/register/home if already signed in
       if (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/register' || req.nextUrl.pathname === '/') {
-        if (userRole === 'TEACHER') {
+        if (role === 'TEACHER') {
           return NextResponse.redirect(new URL('/admin/batches', req.url));
         } else {
           return NextResponse.redirect(new URL('/student/timeline', req.url));
