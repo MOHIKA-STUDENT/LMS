@@ -9,7 +9,7 @@ import {
   deleteMaterialAction,
 } from '@/app/actions/lms-actions';
 import { processAndValidateFileUpload } from '@/lib/utils/asset-shield';
-import { formatCloudinaryFileUrl } from '@/lib/storage/cloudinary';
+import { formatCloudinaryFileUrl } from '@/lib/utils/url-helper';
 import { BookOpen, UploadCloud, FileText, Trash2, Download, Eye, Edit3, X } from 'lucide-react';
 import { toast } from 'sonner';
 

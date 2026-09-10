@@ -2,7 +2,8 @@
 
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db/prisma';
-import { uploadToCloudinary, formatCloudinaryFileUrl } from '@/lib/storage/cloudinary';
+import { uploadToCloudinary } from '@/lib/storage/cloudinary';
+import { formatCloudinaryFileUrl } from '@/lib/utils/url-helper';
 import { CEFRLevel, Role } from '@prisma/client';
 
 // ==========================================

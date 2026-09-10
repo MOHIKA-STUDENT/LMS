@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getMaterialsAction } from '@/app/actions/lms-actions';
-import { formatCloudinaryFileUrl } from '@/lib/storage/cloudinary';
+import { formatCloudinaryFileUrl } from '@/lib/utils/url-helper';
 import { BookOpen, Download, FileText, File, Eye, X } from 'lucide-react';
 
 export default function StudentNotesPage() {
