@@ -87,7 +87,7 @@ Respond ONLY with syntactically valid JSON matching this exact TypeScript struct
 DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. Output raw valid JSON only.`;
 
   if (ai) {
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-flash-lite-latest', 'gemma-4-26b-a4b-it'];
     for (const modelName of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
@@ -177,7 +177,7 @@ export async function generateQuizFromPPTWithGemini(
   cefrLevel: string
 ): Promise<{ title: string; cleanTopic?: string; questions: QuizQuestion[] }> {
   const ai = getGeminiClient();
-  const promptText = `You are a world-class AI English Master Tutor.
+  const promptText = `You are an All-Rounder Master Professor & Educator across all domain branches (Grammar, Literature, Academic Writing, Business, Science, Technical, IELTS/TOEFL, and Professional Education).
 A teacher uploaded or pasted PPT slide notes / lesson content:
 "${pptContent.slice(0, 3500)}"
 
@@ -203,7 +203,7 @@ Respond ONLY with syntactically valid JSON matching this exact structure:
 DO NOT include markdown code blocks or preambles. Output raw valid JSON only.`;
 
   if (ai) {
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-flash-lite-latest', 'gemma-4-26b-a4b-it'];
     for (const modelName of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
@@ -319,7 +319,7 @@ Provide detailed, constructive feedback in syntactically valid JSON matching thi
 Output raw valid JSON only. No markdown code blocks, backticks, or text before/after JSON.`;
 
   if (ai) {
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-flash-lite-latest', 'gemma-4-26b-a4b-it'];
     for (const modelName of modelsToTry) {
       try {
         const response = await ai.models.generateContent({

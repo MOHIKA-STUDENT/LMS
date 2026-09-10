@@ -18,7 +18,8 @@ import { toast } from 'sonner';
 export default function RecordingsAdminPage() {
   const [batches, setBatches] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
-  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
+  const [filterBatchId, setFilterBatchId] = useState<string>('ALL');
+  const [publishBatchId, setPublishBatchId] = useState<string>('');
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,8 +50,8 @@ export default function RecordingsAdminPage() {
 
     if (bRes.success && bRes.batches) {
       setBatches(bRes.batches);
-      if (bRes.batches.length > 0 && !selectedBatchId) {
-        setSelectedBatchId(bRes.batches[0].id);
+      if (bRes.batches.length > 0 && !publishBatchId) {
+        setPublishBatchId(bRes.batches[0].id);
       }
     }
     if (rRes.success && rRes.profiles) {
@@ -60,7 +61,8 @@ export default function RecordingsAdminPage() {
   };
 
   const loadSessions = async (batchId?: string) => {
-    const sRes = await getRecordedSessionsAction(batchId);
+    const targetQuery = !batchId || batchId === 'ALL' ? undefined : batchId;
+    const sRes = await getRecordedSessionsAction(targetQuery);
     if (sRes.success && sRes.sessions) {
       setSessions(sRes.sessions);
     }
@@ -71,10 +73,8 @@ export default function RecordingsAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedBatchId) {
-      loadSessions(selectedBatchId);
-    }
-  }, [selectedBatchId]);
+    loadSessions(filterBatchId);
+  }, [filterBatchId]);
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +82,7 @@ export default function RecordingsAdminPage() {
       toast.error('Please enter a session title.');
       return;
     }
-    if (!isGlobal && !selectedBatchId) {
+    if (!isGlobal && !publishBatchId) {
       toast.error('Please select a target batch or check All Batches.');
       return;
     }
@@ -107,7 +107,7 @@ export default function RecordingsAdminPage() {
         }
 
         const formData = new FormData();
-        formData.append('batchId', isGlobal ? '' : selectedBatchId);
+        formData.append('batchId', isGlobal ? '' : publishBatchId);
         formData.append('isGlobal', isGlobal ? 'true' : 'false');
         formData.append('title', title);
         formData.append('description', description);
@@ -128,7 +128,7 @@ export default function RecordingsAdminPage() {
 
       const formattedUrl = formatEmbedVideoUrl(finalVideoUrl);
       const res = await createRecordedSessionAction({
-        batchId: isGlobal ? null : selectedBatchId,
+        batchId: isGlobal ? null : publishBatchId,
         isGlobal,
         title,
         description,
@@ -142,7 +142,7 @@ export default function RecordingsAdminPage() {
         setDescription('');
         setVideoUrl('');
         setVideoFile(null);
-        loadSessions(selectedBatchId);
+        loadSessions(filterBatchId);
       } else {
         toast.error(res.error || 'Failed to post session recording.');
       }
@@ -158,7 +158,7 @@ export default function RecordingsAdminPage() {
     const res = await deleteRecordedSessionAction(id);
     if (res.success) {
       toast.success('Recording deleted.');
-      loadSessions(selectedBatchId);
+      loadSessions(filterBatchId);
     } else {
       toast.error(res.error || 'Failed to delete recording.');
     }
@@ -178,13 +178,15 @@ export default function RecordingsAdminPage() {
     if (res.success) {
       toast.success('Recording updated successfully!');
       setEditingSession(null);
-      loadSessions(selectedBatchId);
+      loadSessions(filterBatchId);
     } else {
       toast.error(res.error || 'Failed to update recording.');
     }
   };
 
-  const batchStudents = students.filter((s) => s.batchId === selectedBatchId && s.role === 'STUDENT');
+  const batchStudents = students.filter(
+    (s) => (filterBatchId === 'ALL' || s.batchId === filterBatchId) && s.role === 'STUDENT'
+  );
 
   return (
     <div className="space-y-6">
@@ -198,12 +200,13 @@ export default function RecordingsAdminPage() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <label className="text-xs font-semibold text-theme-sub uppercase">Batch Filter:</label>
+          <label className="text-xs font-semibold text-theme-sub uppercase">Filter View:</label>
           <select
-            value={selectedBatchId}
-            onChange={(e) => setSelectedBatchId(e.target.value)}
+            value={filterBatchId}
+            onChange={(e) => setFilterBatchId(e.target.value)}
             className="px-4 py-2 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500 font-semibold"
           >
+            <option value="ALL">All Batches & Global</option>
             {batches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name} ({b.cefrLevel})
@@ -249,7 +252,7 @@ export default function RecordingsAdminPage() {
 
         <form onSubmit={handleCreateSession} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Target Scope</label>
+            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Target Batch Scope</label>
             <div className="flex items-center space-x-3 pt-1">
               <label className="flex items-center space-x-2 text-xs text-theme-main cursor-pointer">
                 <input
@@ -263,8 +266,8 @@ export default function RecordingsAdminPage() {
 
               {!isGlobal && (
                 <select
-                  value={selectedBatchId}
-                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  value={publishBatchId}
+                  onChange={(e) => setPublishBatchId(e.target.value)}
                   className="flex-1 px-3 py-1.5 bg-theme-input border border-theme rounded-xl text-theme-main text-xs"
                 >
                   {batches.map((b) => (
