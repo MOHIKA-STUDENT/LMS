@@ -345,6 +345,53 @@ export async function deleteMaterialAction(id: string) {
   }
 }
 
+export async function updateMaterialAction(formData: FormData) {
+  try {
+    const id = formData.get('id') as string;
+    const batchId = formData.get('batchId') as string;
+    const isGlobal = formData.get('isGlobal') === 'true';
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+    const file = formData.get('file') as File | null;
+
+    if (!id || !title) {
+      return { success: false, error: 'Missing material ID or title.' };
+    }
+
+    let fileData: any = {};
+    if (file && file.size > 0) {
+      const targetFolder = isGlobal ? 'materials/global' : `materials/${batchId || 'general'}`;
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      const uploadResult = await uploadToCloudinary(fileBuffer, file.name, targetFolder);
+
+      if (!uploadResult.success || !uploadResult.url) {
+        return { success: false, error: uploadResult.error || 'Cloudinary upload failed.' };
+      }
+
+      fileData = {
+        fileUrl: uploadResult.url,
+        fileType: file.name.split('.').pop() || 'file',
+        fileSizeBytes: uploadResult.bytes || file.size,
+      };
+    }
+
+    const material = await prisma.courseMaterial.update({
+      where: { id },
+      data: {
+        batchId: isGlobal ? null : (batchId || null),
+        isGlobal,
+        title,
+        description: description || null,
+        ...fileData,
+      },
+    });
+
+    return { success: true, material };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update material.' };
+  }
+}
+
 // ==========================================
 // HOMEWORK & GRADING ACTIONS
 // ==========================================
@@ -916,6 +963,50 @@ export async function submitHomeworkAction(formData: FormData) {
     return { success: true, submission };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to submit homework.' };
+  }
+}
+
+export async function updateHomeworkSubmissionAction(formData: FormData) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const submissionId = formData.get('submissionId') as string;
+    const writtenResponse = formData.get('writtenResponse') as string;
+    const file = formData.get('file') as File | null;
+
+    if (!submissionId) {
+      return { success: false, error: 'Missing submission ID.' };
+    }
+
+    const existing = await prisma.homeworkSubmission.findUnique({
+      where: { id: submissionId },
+    });
+
+    if (!existing || existing.studentId !== user.id) {
+      return { success: false, error: 'Submission not found or permission denied.' };
+    }
+
+    let fileUrl = existing.fileUrl;
+    if (file && file.size > 0) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const uploadRes = await uploadToCloudinary(buffer, file.name, `homework/${user.id}`);
+      if (uploadRes.success && uploadRes.url) {
+        fileUrl = uploadRes.url;
+      }
+    }
+
+    const submission = await prisma.homeworkSubmission.update({
+      where: { id: submissionId },
+      data: {
+        submissionText: writtenResponse || null,
+        fileUrl,
+      },
+    });
+
+    return { success: true, submission };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update homework submission.' };
   }
 }
 

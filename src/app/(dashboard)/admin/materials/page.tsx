@@ -5,10 +5,11 @@ import {
   getBatchesAction,
   getMaterialsAction,
   uploadMaterialAction,
+  updateMaterialAction,
   deleteMaterialAction,
 } from '@/app/actions/lms-actions';
 import { processAndValidateFileUpload } from '@/lib/utils/asset-shield';
-import { BookOpen, UploadCloud, FileText, Trash2, Download, Eye, X } from 'lucide-react';
+import { BookOpen, UploadCloud, FileText, Trash2, Download, Eye, Edit3, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MaterialsPage() {
@@ -23,6 +24,15 @@ export default function MaterialsPage() {
 
   // In-App Preview Modal
   const [previewMaterial, setPreviewMaterial] = useState<any | null>(null);
+
+  // Edit Material Modal State
+  const [editingMaterial, setEditingMaterial] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editIsGlobal, setEditIsGlobal] = useState(false);
+  const [editBatchId, setEditBatchId] = useState('');
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [updating, setUpdating] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -90,6 +100,60 @@ export default function MaterialsPage() {
       toast.error(err.message || 'Failed to upload material');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleEditOpen = (m: any) => {
+    setEditingMaterial(m);
+    setEditTitle(m.title || '');
+    setEditDescription(m.description || '');
+    setEditIsGlobal(!!m.isGlobal);
+    setEditBatchId(m.batchId || (batches[0]?.id || ''));
+    setEditFile(null);
+  };
+
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMaterial) return;
+    if (!editTitle.trim()) {
+      toast.error('Material title is required.');
+      return;
+    }
+
+    setUpdating(true);
+
+    try {
+      let replacementFile: File | null = null;
+      if (editFile) {
+        const validation = await processAndValidateFileUpload(editFile);
+        if (!validation.valid || !validation.processedFile) {
+          toast.error(validation.error || 'Replacement file validation failed.');
+          setUpdating(false);
+          return;
+        }
+        replacementFile = validation.processedFile;
+      }
+
+      const formData = new FormData();
+      formData.append('id', editingMaterial.id);
+      formData.append('title', editTitle);
+      formData.append('description', editDescription);
+      formData.append('isGlobal', editIsGlobal ? 'true' : 'false');
+      formData.append('batchId', editIsGlobal ? '' : editBatchId);
+      if (replacementFile) {
+        formData.append('file', replacementFile);
+      }
+
+      const res = await updateMaterialAction(formData);
+      if (!res.success) throw new Error(res.error || 'Failed to update material.');
+
+      toast.success('Course material updated successfully!');
+      setEditingMaterial(null);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update material');
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -236,6 +300,14 @@ export default function MaterialsPage() {
                       <Eye className="w-4 h-4" />
                       <span>Preview</span>
                     </button>
+                    <button
+                      onClick={() => handleEditOpen(m)}
+                      className="px-3 py-1.5 bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                      title="Edit Material Details"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      <span>Edit</span>
+                    </button>
                     <a
                       href={fileUrl}
                       target="_blank"
@@ -260,6 +332,107 @@ export default function MaterialsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Material Modal */}
+      {editingMaterial && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-2xl w-full max-w-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-theme pb-3">
+              <h3 className="font-bold text-theme-main text-lg flex items-center space-x-2">
+                <Edit3 className="w-5 h-5 text-indigo-500" />
+                <span>Edit Course Material</span>
+              </h3>
+              <button
+                onClick={() => setEditingMaterial(null)}
+                className="p-2 text-theme-sub hover:text-theme-main bg-theme-card-sub rounded-xl border border-theme"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Target Scope</label>
+                <div className="flex items-center space-x-3 pt-1">
+                  <label className="flex items-center space-x-2 text-xs text-theme-main cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editIsGlobal}
+                      onChange={(e) => setEditIsGlobal(e.target.checked)}
+                      className="rounded border-theme text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="font-semibold text-indigo-600 dark:text-indigo-300">All Batches (Global)</span>
+                  </label>
+
+                  {!editIsGlobal && (
+                    <select
+                      value={editBatchId}
+                      onChange={(e) => setEditBatchId(e.target.value)}
+                      className="flex-1 px-3 py-1.5 bg-theme-input border border-theme rounded-xl text-theme-main text-xs"
+                    >
+                      {batches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.cefrLevel})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Material Title</label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Description</label>
+                <input
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Replace File (Optional - Max 5MB)</label>
+                <input
+                  type="file"
+                  accept=".pdf,.ppt,.pptx,.docx,.doc,.png,.jpg,.jpeg"
+                  onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                  className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+                />
+                <p className="text-[11px] text-theme-sub mt-1">Leave empty to keep existing file: {editingMaterial.fileType.toUpperCase()}</p>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2 border-t border-theme">
+                <button
+                  type="button"
+                  onClick={() => setEditingMaterial(null)}
+                  className="px-4 py-2 bg-theme-card-sub border border-theme rounded-xl text-xs font-semibold text-theme-main"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center space-x-1 transition-all disabled:opacity-50"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>{updating ? 'Saving...' : 'Save Material Changes'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* In-App Document Preview Modal */}
       {previewMaterial && (
