@@ -262,7 +262,14 @@ export async function getLeaderboardAction() {
 export async function getQuizzesAction(batchId?: string) {
   try {
     const quizzes = await prisma.quiz.findMany({
-      where: batchId ? { batchId } : undefined,
+      where: batchId
+        ? {
+            OR: [
+              { batchId },
+              { isGlobal: true },
+            ],
+          }
+        : undefined,
       include: { batch: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -273,7 +280,8 @@ export async function getQuizzesAction(batchId?: string) {
 }
 
 export async function createManualQuizAction(data: {
-  batchId: string;
+  batchId?: string | null;
+  isGlobal?: boolean;
   title: string;
   cefrLevel: CEFRLevel;
   topic: string;
@@ -285,7 +293,8 @@ export async function createManualQuizAction(data: {
 
     const quiz = await prisma.quiz.create({
       data: {
-        batchId: data.batchId,
+        batchId: data.isGlobal ? null : (data.batchId || null),
+        isGlobal: !!data.isGlobal,
         title: data.title,
         cefrLevel: data.cefrLevel,
         topic: data.topic,
@@ -295,7 +304,7 @@ export async function createManualQuizAction(data: {
 
     return { success: true, quiz };
   } catch (err: any) {
-    return { success: false, error: err.message || 'Failed to create manual quiz.' };
+    return { success: false, error: err.message || 'Failed to create quiz.' };
   }
 }
 

@@ -111,14 +111,15 @@ model HomeworkSubmission {
 
 model Quiz {
   id        String    @id @default(uuid())
-  batchId   String
+  batchId   String?
+  isGlobal  Boolean   @default(false) // Target all batches if true
   title     String
   cefrLevel CEFRLevel
   topic     String
   questions Json
   createdAt DateTime  @default(now())
 
-  batch       Batch            @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch       Batch?           @relation(fields: [batchId], references: [id], onDelete: Cascade)
   submissions QuizSubmission[]
 
   @@map("quizzes")
