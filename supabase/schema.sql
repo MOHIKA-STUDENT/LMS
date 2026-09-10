@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure is_active column exists
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
 -- 3. COURSE MATERIALS TABLE
 CREATE TABLE IF NOT EXISTS course_materials (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -126,13 +129,33 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- Drop existing policies to prevent duplication errors
+-- Drop ALL existing policies safely to prevent 42710 "already exists" errors
 DROP POLICY IF EXISTS "Teachers can manage all batches" ON batches;
 DROP POLICY IF EXISTS "Authenticated users can view batch info" ON batches;
+DROP POLICY IF EXISTS "Students can view their assigned batch" ON batches;
+
 DROP POLICY IF EXISTS "Teachers can view and manage all profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can view profile names and points (for Leaderboard)" ON profiles;
+DROP POLICY IF EXISTS "Authenticated users can view profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile on signup" ON profiles;
+
+DROP POLICY IF EXISTS "Teachers can manage course materials" ON course_materials;
+DROP POLICY IF EXISTS "Students can view materials for their batch" ON course_materials;
+
+DROP POLICY IF EXISTS "Teachers can manage assignments" ON assignments;
+DROP POLICY IF EXISTS "Students can view assignments for their batch" ON assignments;
+
+DROP POLICY IF EXISTS "Teachers can view and update all submissions" ON homework_submissions;
+DROP POLICY IF EXISTS "Students can view their own submissions" ON homework_submissions;
+DROP POLICY IF EXISTS "Students can insert their own submissions" ON homework_submissions;
+
+DROP POLICY IF EXISTS "Teachers can manage quizzes" ON quizzes;
+DROP POLICY IF EXISTS "Students can view quizzes for their batch" ON quizzes;
+
+DROP POLICY IF EXISTS "Teachers can view all quiz submissions" ON quiz_submissions;
+DROP POLICY IF EXISTS "Students can view their own quiz submissions" ON quiz_submissions;
+DROP POLICY IF EXISTS "Students can submit quiz results" ON quiz_submissions;
 
 -- ------------------------------------------
 -- 1. BATCHES POLICIES
@@ -167,9 +190,6 @@ CREATE POLICY "Users can insert their own profile on signup"
 -- ------------------------------------------
 -- 3. COURSE MATERIALS POLICIES
 -- ------------------------------------------
-DROP POLICY IF EXISTS "Teachers can manage course materials" ON course_materials;
-DROP POLICY IF EXISTS "Students can view materials for their batch" ON course_materials;
-
 CREATE POLICY "Teachers can manage course materials"
   ON course_materials FOR ALL
   USING (is_teacher());
@@ -181,9 +201,6 @@ CREATE POLICY "Students can view materials for their batch"
 -- ------------------------------------------
 -- 4. ASSIGNMENTS POLICIES
 -- ------------------------------------------
-DROP POLICY IF EXISTS "Teachers can manage assignments" ON assignments;
-DROP POLICY IF EXISTS "Students can view assignments for their batch" ON assignments;
-
 CREATE POLICY "Teachers can manage assignments"
   ON assignments FOR ALL
   USING (is_teacher());
@@ -195,10 +212,6 @@ CREATE POLICY "Students can view assignments for their batch"
 -- ------------------------------------------
 -- 5. HOMEWORK SUBMISSIONS POLICIES
 -- ------------------------------------------
-DROP POLICY IF EXISTS "Teachers can view and update all submissions" ON homework_submissions;
-DROP POLICY IF EXISTS "Students can view their own submissions" ON homework_submissions;
-DROP POLICY IF EXISTS "Students can insert their own submissions" ON homework_submissions;
-
 CREATE POLICY "Teachers can view and update all submissions"
   ON homework_submissions FOR ALL
   USING (is_teacher());
@@ -214,9 +227,6 @@ CREATE POLICY "Students can insert their own submissions"
 -- ------------------------------------------
 -- 6. QUIZZES POLICIES
 -- ------------------------------------------
-DROP POLICY IF EXISTS "Teachers can manage quizzes" ON quizzes;
-DROP POLICY IF EXISTS "Students can view quizzes for their batch" ON quizzes;
-
 CREATE POLICY "Teachers can manage quizzes"
   ON quizzes FOR ALL
   USING (is_teacher());
@@ -228,10 +238,6 @@ CREATE POLICY "Students can view quizzes for their batch"
 -- ------------------------------------------
 -- 7. QUIZ SUBMISSIONS POLICIES
 -- ------------------------------------------
-DROP POLICY IF EXISTS "Teachers can view all quiz submissions" ON quiz_submissions;
-DROP POLICY IF EXISTS "Students can view their own quiz submissions" ON quiz_submissions;
-DROP POLICY IF EXISTS "Students can submit quiz results" ON quiz_submissions;
-
 CREATE POLICY "Teachers can view all quiz submissions"
   ON quiz_submissions FOR SELECT
   USING (is_teacher());
