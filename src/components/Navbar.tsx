@@ -110,6 +110,17 @@ export default function Navbar({ profile }: NavbarProps) {
             </div>
           )}
 
+          {isTeacher && (
+            <Link
+              href={pathname.startsWith('/admin') ? '/student/timeline' : '/admin/batches'}
+              className="px-2.5 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-300 rounded-lg text-xs font-bold border border-purple-500/30 transition-colors flex items-center gap-1"
+              title="Switch between Teacher Admin and Student preview views"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">{pathname.startsWith('/admin') ? 'Student View' : 'Teacher View'}</span>
+            </Link>
+          )}
+
           {!isTeacher && (
             <Link
               href="/student/settings"

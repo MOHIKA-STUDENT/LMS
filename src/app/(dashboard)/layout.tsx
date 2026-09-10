@@ -39,6 +39,14 @@ export default async function DashboardLayout({
         });
       }
 
+      if (profile && metadataRole === 'TEACHER' && profile.role !== 'TEACHER') {
+        profile = await prisma.profile.update({
+          where: { id: user.id },
+          data: { role: 'TEACHER' },
+          include: { batch: true },
+        });
+      }
+
       // Sync publicMetadata in Clerk if missing or mismatched
       if (profile && (user.publicMetadata as any)?.role !== profile.role) {
         try {
@@ -47,11 +55,11 @@ export default async function DashboardLayout({
             publicMetadata: { role: profile.role },
           });
         } catch (mErr) {
-          console.warn('Could not sync Clerk publicMetadata:', mErr);
+          // Silent fallback for Edge / Vercel
         }
       }
     } catch (err) {
-      console.warn('Prisma layout query notice:', err);
+      // Quiet handler for build-time/prerender queries
     }
   }
 
