@@ -101,9 +101,18 @@ export default function BatchesPage() {
                   <span className="px-2.5 py-1 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-mono font-bold">
                     {batch.cefrLevel} LEVEL
                   </span>
-                  <span className="text-xs text-theme-sub">
-                    ID: {batch.id.substring(0, 8)}...
-                  </span>
+                  {batch.joinCode && (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(batch.joinCode);
+                        toast.success(`Copied join code: ${batch.joinCode}`);
+                      }}
+                      className="px-2 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30 rounded-lg text-xs font-mono font-bold hover:bg-purple-500/30 transition-colors flex items-center space-x-1"
+                      title="Click to copy student join code"
+                    >
+                      <span>Code: {batch.joinCode}</span>
+                    </button>
+                  )}
                 </div>
 
                 <h3 className="text-lg font-bold text-theme-main mb-2">{batch.name}</h3>

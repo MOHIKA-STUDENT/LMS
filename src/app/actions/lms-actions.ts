@@ -10,7 +10,24 @@ import { CEFRLevel, Role } from '@prisma/client';
 // ==========================================
 export async function getBatchesAction() {
   try {
+    const user = await currentUser();
+    let whereClause: any = undefined;
+
+    if (user) {
+      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+      if (profile?.role === 'TEACHER') {
+        // Teacher sees their own batches or unassigned teacherId batches
+        whereClause = {
+          OR: [
+            { teacherId: user.id },
+            { teacherId: null },
+          ],
+        };
+      }
+    }
+
     const batches = await prisma.batch.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
     });
     return { success: true, batches };
@@ -28,13 +45,22 @@ export async function createBatchAction(data: {
 }) {
   try {
     const user = await currentUser();
-    const role = (user?.publicMetadata as any)?.role || 'STUDENT';
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    const role = (user.publicMetadata as any)?.role || profile?.role || 'STUDENT';
     if (role !== 'TEACHER') {
       return { success: false, error: 'Unauthorized. Teachers only.' };
     }
 
+    const cleanNamePrefix = data.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'ENG';
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const joinCode = `${cleanNamePrefix}-${randomNum}`;
+
     const batch = await prisma.batch.create({
       data: {
+        teacherId: user.id,
+        joinCode,
         name: data.name,
         description: data.description || null,
         cefrLevel: data.cefrLevel,
@@ -56,10 +82,7 @@ export async function updateBatchScheduleAction(
 ) {
   try {
     const user = await currentUser();
-    const role = (user?.publicMetadata as any)?.role || 'STUDENT';
-    if (role !== 'TEACHER') {
-      return { success: false, error: 'Unauthorized. Teachers only.' };
-    }
+    if (!user) return { success: false, error: 'Unauthorized.' };
 
     const batch = await prisma.batch.update({
       where: { id: batchId },
@@ -75,12 +98,61 @@ export async function updateBatchScheduleAction(
   }
 }
 
+export async function joinBatchByCodeAction(joinCode: string) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    if (!joinCode || joinCode.trim().length < 3) {
+      return { success: false, error: 'Please enter a valid Batch Join Code.' };
+    }
+
+    const cleanCode = joinCode.trim().toUpperCase();
+    const batch = await prisma.batch.findFirst({
+      where: { joinCode: cleanCode },
+    });
+
+    if (!batch) {
+      return { success: false, error: 'Invalid Batch Join Code. Please check with your teacher.' };
+    }
+
+    const updatedProfile = await prisma.profile.update({
+      where: { id: user.id },
+      data: { batchId: batch.id },
+      include: { batch: true },
+    });
+
+    return { success: true, batch, profile: updatedProfile };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to join batch with code.' };
+  }
+}
+
 // ==========================================
 // ROSTER & PROFILE ACTIONS
 // ==========================================
 export async function getRosterAction() {
   try {
+    const user = await currentUser();
+    let whereClause: any = undefined;
+
+    if (user) {
+      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+      if (profile?.role === 'TEACHER') {
+        // Teacher ONLY sees students in their own batches OR unassigned students
+        whereClause = {
+          role: 'STUDENT',
+          OR: [
+            { batch: { teacherId: user.id } },
+            { batchId: null },
+            { batch: { teacherId: null } },
+          ],
+        };
+      }
+    }
+
     const profiles = await prisma.profile.findMany({
+      where: whereClause,
       include: { batch: true },
       orderBy: { createdAt: 'desc' },
     });

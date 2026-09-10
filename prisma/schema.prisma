@@ -44,6 +44,8 @@ model Profile {
 
 model Batch {
   id           String    @id @default(uuid())
+  teacherId    String?
+  joinCode     String?   @unique
   name         String
   description  String?
   cefrLevel    CEFRLevel @default(B1)

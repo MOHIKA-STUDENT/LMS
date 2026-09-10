@@ -55,10 +55,47 @@ export default function StudentTimelinePage() {
       {loading ? (
         <div className="py-12 text-center text-theme-sub animate-pulse">Loading batch schedule...</div>
       ) : !batch ? (
-        <div className="p-8 text-center bg-theme-card border border-theme rounded-2xl shadow-lg">
-          <BookOpen className="w-12 h-12 text-theme-sub mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-theme-main">No Batch Assigned Yet</h3>
-          <p className="text-sm text-theme-sub mt-1">Please ask your teacher to assign you to a batch in the Roster manager.</p>
+        <div className="p-8 bg-theme-card border border-theme rounded-2xl shadow-xl max-w-lg mx-auto text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto">
+            <BookOpen className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-theme-main">Join Your Teacher's Class Batch</h3>
+            <p className="text-sm text-theme-sub mt-1">Enter the 6-character Batch Join Code provided by your teacher (e.g. ENG-101)</p>
+          </div>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const input = form.elements.namedItem('joinCode') as HTMLInputElement;
+              const code = input?.value;
+
+              const res = await (await import('@/app/actions/lms-actions')).joinBatchByCodeAction(code);
+              if (!res.success) {
+                (await import('sonner')).toast.error(res.error || 'Failed to join batch.');
+              } else {
+                (await import('sonner')).toast.success(`Enrolled successfully in ${res.batch?.name}!`);
+                setBatch(res.batch);
+                setProfile(res.profile);
+              }
+            }}
+            className="flex flex-col sm:flex-row gap-2 pt-2"
+          >
+            <input
+              type="text"
+              name="joinCode"
+              required
+              placeholder="Enter Join Code (e.g. MOHI-492)"
+              className="flex-1 px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm font-mono uppercase focus:outline-none focus:border-indigo-500"
+            />
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-600/30 transition-all"
+            >
+              Join Batch
+            </button>
+          </form>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
