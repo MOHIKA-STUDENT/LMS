@@ -2,7 +2,6 @@
 
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db/prisma';
-import { uploadToCloudinary } from '@/lib/storage/cloudinary';
 import { formatCloudinaryFileUrl } from '@/lib/utils/url-helper';
 import { CEFRLevel, Role } from '@prisma/client';
 
@@ -317,6 +316,7 @@ export async function uploadMaterialAction(formData: FormData) {
 
     const targetFolder = isGlobal ? 'materials/global' : `materials/${batchId}`;
     const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const { uploadToCloudinary } = await import('@/lib/storage/cloudinary');
     const uploadResult = await uploadToCloudinary(fileBuffer, file.name, targetFolder);
 
     if (!uploadResult.success || !uploadResult.url) {
@@ -369,6 +369,7 @@ export async function updateMaterialAction(formData: FormData) {
     if (file && file.size > 0) {
       const targetFolder = isGlobal ? 'materials/global' : `materials/${batchId || 'general'}`;
       const fileBuffer = Buffer.from(await file.arrayBuffer());
+      const { uploadToCloudinary } = await import('@/lib/storage/cloudinary');
       const uploadResult = await uploadToCloudinary(fileBuffer, file.name, targetFolder);
 
       if (!uploadResult.success || !uploadResult.url) {
@@ -958,6 +959,7 @@ export async function submitHomeworkAction(formData: FormData) {
     let fileUrl: string | null = null;
     if (file && file.size > 0) {
       const buffer = Buffer.from(await file.arrayBuffer());
+      const { uploadToCloudinary } = await import('@/lib/storage/cloudinary');
       const uploadRes = await uploadToCloudinary(buffer, file.name, `homework/${user.id}`);
       if (uploadRes.success && uploadRes.url) {
         fileUrl = uploadRes.url;
@@ -1003,6 +1005,7 @@ export async function updateHomeworkSubmissionAction(formData: FormData) {
     let fileUrl = existing.fileUrl;
     if (file && file.size > 0) {
       const buffer = Buffer.from(await file.arrayBuffer());
+      const { uploadToCloudinary } = await import('@/lib/storage/cloudinary');
       const uploadRes = await uploadToCloudinary(buffer, file.name, `homework/${user.id}`);
       if (uploadRes.success && uploadRes.url) {
         fileUrl = uploadRes.url;
@@ -1071,6 +1074,7 @@ export async function updateProfileAvatarAction(formData: FormData) {
     if (!file) return { success: false, error: 'No avatar image uploaded.' };
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const { uploadToCloudinary } = await import('@/lib/storage/cloudinary');
     const uploadRes = await uploadToCloudinary(buffer, file.name, `avatars/${user.id}`);
 
     if (!uploadRes.success || !uploadRes.url) {
