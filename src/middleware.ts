@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
   '/login(.*)',
   '/register(.*)',
   '/forgot-password(.*)',
+  '/manifest.json',
+  '/favicon.ico',
   '/api/public(.*)',
 ]);
 
@@ -20,6 +22,11 @@ const isStudentRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, req) => {
   try {
     const { userId, sessionClaims } = await auth();
+
+    // Allow static manifest & public assets directly
+    if (req.nextUrl.pathname === '/manifest.json' || req.nextUrl.pathname === '/favicon.ico') {
+      return NextResponse.next();
+    }
 
     // If trying to access protected route without logging in
     if (!isPublicRoute(req) && !userId) {
@@ -64,7 +71,7 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jwt|png|jpg|jpeg|gif|webp|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/((?!_next|manifest\\.json|favicon\\.ico|[^?]*\\.(?:html?|css|js(?!on)|json|jwt|png|jpg|jpeg|gif|webp|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
   ],
 };
