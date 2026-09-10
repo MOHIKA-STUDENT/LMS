@@ -1,45 +1,49 @@
 # English Tutors Academy LMS 🎓
 
-> **An MNC Production-Grade, Offline-First Learning Management System built with Next.js 16, Clerk Auth, Neon PostgreSQL, Prisma ORM, Cloudinary CDN, Google Gemini AI, and Mobile PWA Support.**
+> **An MNC Production-Grade, Offline-First Learning Management System built with Next.js 16, Clerk Auth, Neon Serverless PostgreSQL, Prisma ORM, Cloudinary CDN, Google Gemini AI, and Mobile PWA Support.**
 
 ---
 
-## ✨ Features Breakdown
+## ✨ System Features & Capabilities
 
-### 👨‍🏫 Teacher Admin Dashboard
-- **Batch Management**: Create and manage student batches (A1-C2 CEFR levels) with schedule timings and live Zoom meeting links.
-- **Roster & Permission Control**: View student profiles, assign batches, toggle portal access (Active/Suspended), and edit details.
-- **Attendance & Fee Tracker**: Record daily student presence (`PRESENT`, `ABSENT`, `LATE`) and track tuition fee statuses (`PAID`, `PENDING`, `OVERDUE`).
-- **Recorded Sessions & Watch Analytics**: Post class video recordings and monitor live student watch engagement (who watched, watched duration, completion %, and who missed out).
-- **Course Materials Vault**: Upload study guides (.pdf, .ppt, .docx) to Cloudinary with 5MB client compression shield. Supports **Specific Batch** OR **All Batches (Global)** target scope.
+### 👨‍🏫 Teacher Admin Panel
+- **Strict Teacher Data Isolation (`teacherId`)**: Each teacher owns and manages their own batches, students, materials, and fee records. Teacher B cannot view or modify Teacher A's students.
+- **Batch Engine & Auto Join Codes**: Create batches (A1-C2 CEFR levels) with schedule timings and Zoom links. Each batch receives a unique 6-character **Batch Join Code** (e.g. `SPOK-492`).
+- **Batch Editing & Deletion**: Update batch info, schedule timings, or delete batches in 1 click.
+- **Masterclass Zoom Broadcast**: Broadcast 1 Zoom meeting link to ALL your batches simultaneously for joint sessions or webinars.
+- **Roster & Access Control**: Manage student accounts, assign batches, edit details, or suspend access for students who left the class.
+- **Attendance & Fee Ledger**: Record daily attendance (`PRESENT`, `ABSENT`, `LATE`) and track tuition fees (`PAID`, `PENDING`, `OVERDUE`).
+- **Recorded Sessions & Watch Analytics**: Stream recorded classes with live watch progress logging (watched duration, completion %, and student view logs).
+- **Course Materials Vault**: Upload study guides (.pdf, .docx, .ppt) to Cloudinary with target scope (**Specific Batch** OR **All Batches (Global)**).
 - **AI & Manual Quiz Studio**:
-  - **Gemini Chat Generator**: Generate 5-question CEFR quizzes from natural prompts.
-  - **Google Forms Parser**: Paste raw quiz text from Google Forms or ChatGPT and convert into editable quiz cards.
-  - **Draft Preview & Editor**: Review and modify questions, options, and explanations before publishing.
-  - **Publish Scope**: Publish quizzes to **All Batches (Global)** or a **Specific Batch**.
-- **Homework Terminal & AI Grading**: View student submissions, run AI proofread reports, and award scores.
+  - **Gemini Chat AI Generator**: Generate CEFR multiple-choice quizzes from natural prompts.
+  - **Google Forms & ChatGPT Parser**: Paste raw quiz text to convert into interactive quizzes.
+  - **Draft Preview & Explanations**: Edit questions and step-by-step answer explanations before publishing.
+- **Homework & Grading Terminal**: Review student homework files and award scores.
 
-### 🎓 Student Learning Portal
-- **Interactive Timeline**: View weekly class schedules and join live Zoom classes with 1-click.
-- **Class Recordings Vault**: Stream recorded live sessions with automatic watch progress tracking.
-- **Fees & Attendance Status**: Check personal attendance rates and fee payment dues.
-- **Daily Quiz Arena**: Take CEFR multiple choice quizzes and view **step-by-step explanations revealed ONLY AFTER test submission**.
-- **Gamified Leaderboard**: Filter by Global Rank or Batch Rank. Only students compete for points (Teachers excluded).
-- **Settings & Profile Customization**: Update display name and upload custom PFP avatar pictures to Cloudinary CDN.
+### 🎓 Student Portal
+- **Batch Join Code Self-Enrollment**: Enter your teacher's 6-character Join Code (`ENG-101`) to automatically enroll in class.
+- **Interactive Schedule & Zoom Link**: View weekly class schedules and join live Zoom classes with 1-click.
+- **Class Recordings Vault**: Stream recorded live sessions with automatic watch progress logging.
+- **Fees & Attendance Tracker**: Check personal attendance rates and fee payment statuses.
+- **Daily Quiz Arena**: Take CEFR multiple-choice quizzes with **step-by-step explanations revealed ONLY AFTER test submission**.
+- **Gamified Leaderboard**: Rank among active enrolled students for points.
+- **Account Customization & PFP Avatar**: Update display name and upload custom PFP avatar images to Cloudinary CDN.
+- **Light & Dark Theme Switcher**: Toggle between Dark and Light themes across all pages.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack & Technologies
 
 - **Framework**: Next.js 16 (App Router + Turbopack)
 - **Authentication**: Clerk Auth (`@clerk/nextjs` v7)
 - **Database**: Neon Serverless PostgreSQL
 - **ORM**: Prisma Client v6.4.0
-- **Cloud Storage**: Cloudinary CDN
+- **Cloud Storage**: Cloudinary CDN (`next-cloudinary`)
 - **Artificial Intelligence**: Google Gemini 2.5 AI (`@google/genai`)
 - **Offline Storage**: Dexie.js (IndexedDB)
-- **PWA**: Web App Manifest (`manifest.json`)
-- **Styling**: Tailwind CSS v4 + Vanilla CSS (Dark & Light Mode)
+- **Mobile PWA**: Web App Manifest (`manifest.json`)
+- **Styling**: Tailwind CSS v4 + Vanilla CSS Variables
 
 ---
 
@@ -56,7 +60,7 @@
    npm install
    ```
 
-3. **Configure `.env.local`**:
+3. **Configure Environment Variables (`.env.local`)**:
    ```env
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
    CLERK_SECRET_KEY=sk_test_...
@@ -93,6 +97,7 @@
 
 ## 🌐 Production Deployment (Vercel)
 
-1. Connect your repository `MOHIKA-STUDENT/LMS` to **[Vercel](https://vercel.com)**.
-2. Add your environment variables in Vercel project settings.
-3. Click **Deploy**!
+1. Connect repository `MOHIKA-STUDENT/LMS` to **Vercel**.
+2. Add environment variables in Vercel project settings.
+3. Update build script in `package.json`: `"build": "prisma generate && next build"`.
+4. Click **Deploy**!
