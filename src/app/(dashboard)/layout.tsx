@@ -24,8 +24,7 @@ export default async function DashboardLayout({
       // Auto-create profile in Prisma if missing
       if (!profile && user.primaryEmailAddress) {
         const emailPrefix = user.primaryEmailAddress.emailAddress.split('@')[0];
-        const formattedName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-        const displayName = user.fullName || user.firstName || formattedName;
+        const displayName = user.fullName || user.username || user.firstName || emailPrefix;
 
         profile = await prisma.profile.create({
           data: {
@@ -35,6 +34,14 @@ export default async function DashboardLayout({
             role: targetRole,
             isActive: true,
           },
+          include: { batch: true },
+        });
+      } else if (profile && (profile.fullName.includes('@') || !profile.fullName)) {
+        const emailPrefix = profile.email ? profile.email.split('@')[0] : 'User';
+        const cleanName = user.fullName || user.username || user.firstName || emailPrefix;
+        profile = await prisma.profile.update({
+          where: { id: user.id },
+          data: { fullName: cleanName },
           include: { batch: true },
         });
       }

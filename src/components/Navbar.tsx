@@ -70,8 +70,9 @@ export default function Navbar({ profile }: NavbarProps) {
   const isTeacher = role === 'TEACHER';
 
   const displayName = formatStudentDisplayName(
-    profile?.fullName || user?.fullName || user?.firstName,
-    user?.primaryEmailAddress?.emailAddress
+    profile?.fullName,
+    user?.primaryEmailAddress?.emailAddress,
+    user?.username || user?.fullName || user?.firstName
   );
 
   const teacherLinks = [
