@@ -75,6 +75,74 @@ export async function createBatchAction(data: {
   }
 }
 
+export async function updateBatchAction(
+  batchId: string,
+  data: {
+    name: string;
+    description?: string;
+    cefrLevel: CEFRLevel;
+    scheduleInfo?: string;
+    zoomLink?: string;
+  }
+) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const batch = await prisma.batch.update({
+      where: { id: batchId },
+      data: {
+        name: data.name,
+        description: data.description || null,
+        cefrLevel: data.cefrLevel,
+        scheduleInfo: data.scheduleInfo || null,
+        zoomLink: data.zoomLink || null,
+      },
+    });
+
+    return { success: true, batch };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update batch.' };
+  }
+}
+
+export async function deleteBatchAction(batchId: string) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    await prisma.batch.delete({
+      where: { id: batchId },
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to delete batch.' };
+  }
+}
+
+export async function broadcastZoomLinkToAllBatchesAction(
+  zoomLink: string,
+  scheduleInfo?: string
+) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    await prisma.batch.updateMany({
+      where: { teacherId: user.id },
+      data: {
+        zoomLink,
+        ...(scheduleInfo ? { scheduleInfo } : {}),
+      },
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to broadcast Zoom link.' };
+  }
+}
+
 export async function updateBatchScheduleAction(
   batchId: string,
   scheduleInfo: string,
