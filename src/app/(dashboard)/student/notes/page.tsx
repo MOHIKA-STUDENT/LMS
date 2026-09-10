@@ -43,7 +43,10 @@ export default function StudentNotesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {materials.map((m) => {
             const fileType = (m.fileType || 'file').toLowerCase();
-            const fileUrl = m.fileUrl || '#';
+            let fileUrl = m.fileUrl || '#';
+            if (fileType === 'pdf' && fileUrl.endsWith('.pdf')) {
+              fileUrl = `${fileUrl}.jpg`;
+            }
             const isViewable = ['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(fileType);
             const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}`;
 

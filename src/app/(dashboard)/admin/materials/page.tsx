@@ -205,7 +205,10 @@ export default function MaterialsPage() {
             {materials.map((m) => {
               const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'Unknown Batch');
               const fileType = (m.fileType || 'file').toLowerCase();
-              const fileUrl = m.fileUrl || '#';
+              let fileUrl = m.fileUrl || '#';
+              if (fileType === 'pdf' && fileUrl.endsWith('.pdf')) {
+                fileUrl = `${fileUrl}.jpg`;
+              }
               const isViewable = ['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(fileType);
               const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}`;
 
