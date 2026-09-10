@@ -132,29 +132,29 @@ export default function StudentHomeworkPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-          <FileText className="w-7 h-7 text-indigo-400" />
+        <h1 className="text-2xl font-bold text-theme-main flex items-center space-x-2">
+          <FileText className="w-7 h-7 text-indigo-500" />
           <span>Homework Upload Terminal & AI Proofreader</span>
         </h1>
-        <p className="text-sm text-slate-400 mt-1">Submit text essays or files and get instant AI grammar feedback powered by Gemini</p>
+        <p className="text-sm text-theme-sub mt-1">Submit text essays or files and get instant AI grammar feedback powered by Gemini</p>
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-slate-400 animate-pulse">Loading homework terminal...</div>
+        <div className="py-12 text-center text-theme-sub animate-pulse">Loading homework terminal...</div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Submission Input Terminal */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-lg font-bold text-white">New Submission</h2>
+            <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4">
+              <h2 className="text-lg font-bold text-theme-main">New Submission</h2>
 
               <form onSubmit={handleSubmitHomework} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Select Assignment</label>
+                  <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Select Assignment</label>
                   <select
                     value={selectedAssignmentId}
                     onChange={(e) => setSelectedAssignmentId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
                   >
                     {assignments.length === 0 ? (
                       <option value="">No active assignments for your batch</option>
@@ -170,12 +170,12 @@ export default function StudentHomeworkPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase">Write Your Homework Text</label>
+                    <label className="block text-xs font-semibold text-theme-sub uppercase">Write Your Homework Text</label>
                     <button
                       type="button"
                       onClick={handleAIProofread}
                       disabled={proofreading || !submissionText}
-                      className="px-3 py-1 bg-purple-600/30 border border-purple-500/40 text-purple-300 hover:bg-purple-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all disabled:opacity-50"
+                      className="px-3 py-1 bg-purple-600/20 border border-purple-500/40 text-purple-600 dark:text-purple-300 hover:bg-purple-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all disabled:opacity-50"
                     >
                       <Sparkles className={`w-3.5 h-3.5 ${proofreading ? 'animate-spin' : ''}`} />
                       <span>{proofreading ? 'AI Analyzing...' : 'Run Gemini AI Proofreader'}</span>
@@ -187,17 +187,17 @@ export default function StudentHomeworkPage() {
                     placeholder="Type your essay or reading exercise text response here..."
                     value={submissionText}
                     onChange={(e) => setSubmissionText(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm font-serif focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-3 bg-theme-input border border-theme rounded-xl text-theme-main text-sm font-serif focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Attach Finished Document (Optional - Max 5MB)</label>
+                  <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Attach Finished Document (Optional - Max 5MB)</label>
                   <input
                     type="file"
                     accept=".pdf,.docx,.doc,.txt,.png,.jpg"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm text-slate-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+                    className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
                   />
                 </div>
 
@@ -216,36 +216,36 @@ export default function StudentHomeworkPage() {
 
             {/* AI Proofreader Report Card */}
             {aiReport && (
-              <div className="bg-gradient-to-br from-purple-950/60 to-slate-900 border border-purple-800/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <div className="flex items-center justify-between border-b border-purple-800/40 pb-3">
-                  <h3 className="font-bold text-white text-base flex items-center space-x-2">
-                    <Bot className="w-6 h-6 text-purple-400" />
+              <div className="bg-gradient-to-br from-purple-900/30 to-theme-card border border-purple-500/30 rounded-2xl p-6 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between border-b border-theme pb-3">
+                  <h3 className="font-bold text-theme-main text-base flex items-center space-x-2">
+                    <Bot className="w-6 h-6 text-purple-500" />
                     <span>AI Proofreader Analysis Report</span>
                   </h3>
 
-                  <span className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full font-mono font-bold text-xs">
+                  <span className="px-3 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30 rounded-full font-mono font-bold text-xs">
                     Grammar Score: {aiReport.grammar_score}%
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-300 italic">{aiReport.overall_feedback}</p>
+                <p className="text-xs text-theme-sub italic">{aiReport.overall_feedback}</p>
 
                 {aiReport.corrections.length > 0 && (
                   <div className="space-y-2 pt-2">
-                    <h4 className="text-xs font-semibold text-purple-300 uppercase">Suggested Grammar Corrections:</h4>
+                    <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase">Suggested Grammar Corrections:</h4>
                     {aiReport.corrections.map((c, i) => (
-                      <div key={i} className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-xs space-y-1">
-                        <div className="text-rose-400 line-through">"{c.original}"</div>
-                        <div className="text-emerald-400 font-semibold">"{c.suggestion}"</div>
-                        <div className="text-slate-400 text-[11px]">💡 {c.reason}</div>
+                      <div key={i} className="p-3 bg-theme-card-sub rounded-xl border border-theme text-xs space-y-1">
+                        <div className="text-rose-500 line-through">"{c.original}"</div>
+                        <div className="text-emerald-500 font-semibold">"{c.suggestion}"</div>
+                        <div className="text-theme-sub text-[11px]">💡 {c.reason}</div>
                       </div>
                     ))}
                   </div>
                 )}
 
                 <div className="pt-2">
-                  <h4 className="text-xs font-semibold text-emerald-400 uppercase mb-1">Polished Version Suggestion:</h4>
-                  <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-xs text-slate-200 font-serif">
+                  <h4 className="text-xs font-semibold text-emerald-500 uppercase mb-1">Polished Version Suggestion:</h4>
+                  <div className="p-3 bg-theme-card-sub rounded-xl border border-theme text-xs text-theme-main font-serif">
                     {aiReport.improved_version}
                   </div>
                 </div>
@@ -254,29 +254,29 @@ export default function StudentHomeworkPage() {
           </div>
 
           {/* Submission History Sidebar */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-white">Your Past Submissions</h2>
+          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 className="text-lg font-bold text-theme-main">Your Past Submissions</h2>
 
             {submissions.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">No past homework submissions found.</p>
+              <p className="text-xs text-theme-sub text-center py-4">No past homework submissions found.</p>
             ) : (
               <div className="space-y-3">
                 {submissions.map((sub) => (
-                  <div key={sub.id} className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-xl space-y-2 text-xs">
+                  <div key={sub.id} className="p-3 bg-theme-card-sub border border-theme rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-white">{sub.assignment?.title || 'Assignment'}</span>
-                      <span className="text-amber-400 font-mono font-semibold">
+                      <span className="font-bold text-theme-main">{sub.assignment?.title || 'Assignment'}</span>
+                      <span className="text-amber-500 font-mono font-semibold">
                         {sub.scoreAwarded > 0 ? `+${sub.scoreAwarded} pts` : 'Pending'}
                       </span>
                     </div>
 
                     {sub.teacherFeedback && (
-                      <div className="p-2 bg-indigo-950/40 border border-indigo-800/40 rounded text-indigo-200">
+                      <div className="p-2 bg-indigo-500/10 border border-indigo-500/30 rounded text-indigo-600 dark:text-indigo-200">
                         💬 Teacher: "{sub.teacherFeedback}"
                       </div>
                     )}
 
-                    <div className="text-[11px] text-slate-500">{new Date(sub.createdAt).toLocaleDateString()}</div>
+                    <div className="text-[11px] text-theme-sub">{new Date(sub.createdAt).toLocaleDateString()}</div>
                   </div>
                 ))}
               </div>
@@ -287,3 +287,4 @@ export default function StudentHomeworkPage() {
     </div>
   );
 }
+

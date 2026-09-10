@@ -49,11 +49,11 @@ export default function Navbar({ profile }: NavbarProps) {
   const navLinks = isTeacher ? teacherLinks : studentLinks;
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/95 dark:bg-slate-900/95 light:bg-white/95 backdrop-blur border-b border-slate-800 text-white">
+    <header className="sticky top-0 z-40 bg-theme-nav backdrop-blur border-b border-theme text-theme-main transition-colors duration-200 shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href={isTeacher ? '/admin/batches' : '/student/timeline'} className="flex items-center space-x-2 font-bold text-xl text-indigo-400 hover:text-indigo-300 transition-colors">
+        <Link href={isTeacher ? '/admin/batches' : '/student/timeline'} className="flex items-center space-x-2 font-bold text-xl text-indigo-600 dark:text-indigo-400 hover:opacity-90 transition-opacity">
           <BookOpen className="w-7 h-7 text-indigo-500" />
-          <span>English<span className="text-white">Academy</span></span>
+          <span>English<span className="text-theme-main">Academy</span></span>
         </Link>
 
         {/* Desktop Navigation Links */}
@@ -67,8 +67,8 @@ export default function Navbar({ profile }: NavbarProps) {
                 href={link.href}
                 className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-1.5 transition-all ${
                   isActive
-                    ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/30'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-600/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 font-bold'
+                    : 'text-theme-sub hover:bg-slate-200/60 dark:hover:bg-slate-800 hover:text-theme-main'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -83,18 +83,28 @@ export default function Navbar({ profile }: NavbarProps) {
           {/* Theme Switcher Button */}
           <button
             onClick={toggleTheme}
-            className="p-2 text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-2 text-theme-sub hover:text-amber-500 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold border border-theme"
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
           >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span className="hidden sm:inline text-amber-400">Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-indigo-600" />
+                <span className="hidden sm:inline text-indigo-600">Dark</span>
+              </>
+            )}
           </button>
 
           {isLoaded && user && (
             <div className="hidden sm:flex flex-col items-end text-xs">
-              <span className="font-semibold text-slate-100 max-w-[140px] truncate">
+              <span className="font-semibold text-theme-main max-w-[140px] truncate">
                 {displayName}
               </span>
-              <span className="text-[10px] text-indigo-400 font-mono font-medium">
+              <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">
                 {role} {role === 'STUDENT' && profile ? `• ${profile.points} pts` : ''}
               </span>
             </div>
@@ -103,7 +113,7 @@ export default function Navbar({ profile }: NavbarProps) {
           {!isTeacher && (
             <Link
               href="/student/settings"
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-xs font-semibold"
+              className="p-2 text-theme-sub hover:text-theme-main hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors text-xs font-semibold border border-theme"
               title="Account Settings"
             >
               <Settings className="w-4 h-4" />

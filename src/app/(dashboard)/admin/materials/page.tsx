@@ -105,35 +105,35 @@ export default function MaterialsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-          <BookOpen className="w-7 h-7 text-indigo-400" />
+        <h1 className="text-2xl font-bold text-theme-main flex items-center space-x-2">
+          <BookOpen className="w-7 h-7 text-indigo-500" />
           <span>Lesson Material Uploads</span>
         </h1>
-        <p className="text-sm text-slate-400 mt-1">Upload PPT, PDF, and DOCX study guides filtered by target student batch (5MB max limit enforced)</p>
+        <p className="text-sm text-theme-sub mt-1">Upload PPT, PDF, and DOCX study guides filtered by target student batch (5MB max limit enforced)</p>
       </div>
 
       {/* Uploader Form */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-white mb-4">Upload New Material</h2>
+      <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-theme-main mb-4">Upload New Material</h2>
         <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Target Scope</label>
+            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Target Scope</label>
             <div className="flex items-center space-x-3 pt-1">
-              <label className="flex items-center space-x-2 text-xs text-white cursor-pointer">
+              <label className="flex items-center space-x-2 text-xs text-theme-main cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isGlobal}
                   onChange={(e) => setIsGlobal(e.target.checked)}
-                  className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded border-theme text-indigo-600 focus:ring-indigo-500"
                 />
-                <span className="font-semibold text-indigo-300">All Batches (Global)</span>
+                <span className="font-semibold text-indigo-600 dark:text-indigo-300">All Batches (Global)</span>
               </label>
 
               {!isGlobal && (
                 <select
                   value={selectedBatchId}
                   onChange={(e) => setSelectedBatchId(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                  className="flex-1 px-3 py-1.5 bg-theme-input border border-theme rounded-xl text-theme-main text-xs"
                 >
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -146,36 +146,36 @@ export default function MaterialsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Material Title</label>
+            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Material Title</label>
             <input
               type="text"
               required
               placeholder="e.g. Unit 3 Grammar & Syntax Guide"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Description (Optional)</label>
+            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Description (Optional)</label>
             <input
               type="text"
               placeholder="Brief description of the material..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Upload File (.pdf, .ppt, .docx - Max 5MB)</label>
+            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Upload File (.pdf, .ppt, .docx - Max 5MB)</label>
             <input
               type="file"
               required
               accept=".pdf,.ppt,.pptx,.docx,.doc,.png,.jpg,.jpeg"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm text-slate-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+              className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
             />
           </div>
 
@@ -193,27 +193,27 @@ export default function MaterialsPage() {
       </div>
 
       {/* Materials List */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <h2 className="text-lg font-bold text-white">Uploaded Course Materials</h2>
+      <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4">
+        <h2 className="text-lg font-bold text-theme-main">Uploaded Course Materials</h2>
 
         {loading ? (
-          <div className="py-8 text-center text-slate-400 animate-pulse">Loading materials...</div>
+          <div className="py-8 text-center text-theme-sub animate-pulse">Loading materials...</div>
         ) : materials.length === 0 ? (
-          <p className="text-sm text-slate-500 text-center py-6">No materials uploaded yet.</p>
+          <p className="text-sm text-theme-sub text-center py-6">No materials uploaded yet.</p>
         ) : (
-          <div className="divide-y divide-slate-800">
+          <div className="divide-y divide-theme">
             {materials.map((m) => {
               const batchName = batches.find((b) => b.id === m.batchId)?.name || 'Unknown Batch';
               return (
-                <div key={m.id} className="py-4 flex items-center justify-between hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
+                <div key={m.id} className="py-4 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/20">
+                    <div className="p-3 bg-indigo-600/20 text-indigo-500 rounded-xl border border-indigo-500/20">
                       <FileText className="w-6 h-6" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white text-sm">{m.title}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        Batch: <span className="text-indigo-300 font-medium">{batchName}</span> • {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • {(m.fileType || 'file').toUpperCase()}
+                      <h4 className="font-semibold text-theme-main text-sm">{m.title}</h4>
+                      <p className="text-xs text-theme-sub mt-0.5">
+                        Batch: <span className="text-indigo-600 dark:text-indigo-300 font-medium">{batchName}</span> • {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • {(m.fileType || 'file').toUpperCase()}
                       </p>
                     </div>
                   </div>
@@ -223,14 +223,14 @@ export default function MaterialsPage() {
                       href={m.fileUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="p-2 text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
+                      className="p-2 text-indigo-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
                       title="Download File"
                     >
                       <Download className="w-5 h-5" />
                     </a>
                     <button
                       onClick={() => handleDelete(m.id)}
-                      className="p-2 text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
+                      className="p-2 text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
                       title="Delete Material"
                     >
                       <Trash2 className="w-5 h-5" />

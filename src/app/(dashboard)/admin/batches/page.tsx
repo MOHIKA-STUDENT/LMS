@@ -67,11 +67,11 @@ export default function BatchesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-            <Layers className="w-7 h-7 text-indigo-400" />
+          <h1 className="text-2xl font-bold text-theme-main flex items-center space-x-2">
+            <Layers className="w-7 h-7 text-indigo-500" />
             <span>Batch Engine & Groups</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Manage academy batches, time schedules, and virtual Zoom links</p>
+          <p className="text-sm text-theme-sub mt-1">Manage academy batches, time schedules, and virtual Zoom links</p>
         </div>
 
         <button
@@ -85,45 +85,45 @@ export default function BatchesPage() {
 
       {/* Batches Grid */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 animate-pulse">Loading academy batches...</div>
+        <div className="py-12 text-center text-theme-sub animate-pulse">Loading academy batches...</div>
       ) : batches.length === 0 ? (
-        <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-2xl">
-          <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-300">No Batches Found</h3>
-          <p className="text-sm text-slate-500 mt-1">Click "Create New Batch" to add your first academy group.</p>
+        <div className="p-12 text-center bg-theme-card border border-theme rounded-2xl shadow-sm">
+          <BookOpen className="w-12 h-12 text-theme-sub mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-theme-main">No Batches Found</h3>
+          <p className="text-sm text-theme-sub mt-1">Click "Create New Batch" to add your first academy group.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {batches.map((batch) => (
-            <div key={batch.id} className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-6 transition-all shadow-xl flex flex-col justify-between">
+            <div key={batch.id} className="bg-theme-card border border-theme hover:border-indigo-500/50 rounded-2xl p-6 transition-all shadow-xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="px-2.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-mono font-bold">
+                  <span className="px-2.5 py-1 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-mono font-bold">
                     {batch.cefrLevel} LEVEL
                   </span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-theme-sub">
                     ID: {batch.id.substring(0, 8)}...
                   </span>
                 </div>
 
-                <h3 className="text-lg font-bold text-white mb-2">{batch.name}</h3>
-                <p className="text-sm text-slate-400 mb-4 line-clamp-2">{batch.description || 'No description provided.'}</p>
+                <h3 className="text-lg font-bold text-theme-main mb-2">{batch.name}</h3>
+                <p className="text-sm text-theme-sub mb-4 line-clamp-2">{batch.description || 'No description provided.'}</p>
               </div>
 
-              <div className="space-y-2 border-t border-slate-800/80 pt-4 text-xs text-slate-300">
+              <div className="space-y-2 border-t border-theme pt-4 text-xs text-theme-sub">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-indigo-400" />
+                  <Calendar className="w-4 h-4 text-indigo-500" />
                   <span>{batch.scheduleInfo || 'Schedule pending'}</span>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Video className="w-4 h-4 text-emerald-400" />
+                  <Video className="w-4 h-4 text-emerald-500" />
                   {batch.zoomLink ? (
-                    <a href={batch.zoomLink} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline truncate">
+                    <a href={batch.zoomLink} target="_blank" rel="noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:underline truncate font-medium">
                       {batch.zoomLink}
                     </a>
                   ) : (
-                    <span className="text-slate-500">No Zoom link attached</span>
+                    <span className="text-theme-sub opacity-70">No Zoom link attached</span>
                   )}
                 </div>
               </div>
@@ -135,28 +135,28 @@ export default function BatchesPage() {
       {/* Create Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-            <h2 className="text-xl font-bold text-white">Create New Academy Batch</h2>
+          <div className="bg-theme-card border border-theme rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+            <h2 className="text-xl font-bold text-theme-main">Create New Academy Batch</h2>
 
             <form onSubmit={handleCreateBatch} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Batch Name</label>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Batch Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Basic English - Batch A"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">CEFR Level</label>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">CEFR Level</label>
                 <select
                   value={cefrLevel}
                   onChange={(e) => setCefrLevel(e.target.value as CEFRLevel)}
-                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
                 >
                   <option value="A1">A1 - Beginner</option>
                   <option value="A2">A2 - Elementary</option>
@@ -168,35 +168,35 @@ export default function BatchesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Description</label>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Description</label>
                 <textarea
                   rows={2}
                   placeholder="Target audience or focus areas..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Class Schedule Info</label>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Class Schedule Info</label>
                 <input
                   type="text"
                   placeholder="e.g. Mon, Wed, Fri at 6:00 PM EST"
                   value={scheduleInfo}
                   onChange={(e) => setScheduleInfo(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Live Zoom Meeting Link</label>
+                <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Live Zoom Meeting Link</label>
                 <input
                   type="url"
                   placeholder="https://zoom.us/j/123456789"
                   value={zoomLink}
                   onChange={(e) => setZoomLink(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -204,7 +204,7 @@ export default function BatchesPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-sm font-semibold"
+                  className="px-4 py-2 bg-theme-card-sub text-theme-main hover:opacity-90 rounded-xl text-sm font-semibold border border-theme"
                 >
                   Cancel
                 </button>

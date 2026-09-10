@@ -57,9 +57,9 @@ export default function StudentSettingsPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto py-4">
       {/* Profile Picture & Display Name Editor */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-        <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-          <User className="w-5 h-5 text-indigo-400" />
+      <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-6">
+        <h2 className="text-lg font-bold text-theme-main flex items-center space-x-2">
+          <User className="w-5 h-5 text-indigo-500" />
           <span>Profile Picture & Display Name</span>
         </h2>
 
@@ -70,7 +70,7 @@ export default function StudentSettingsPage() {
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <User className="w-10 h-10 text-indigo-400" />
+                <User className="w-10 h-10 text-indigo-500" />
               )}
             </div>
             <label className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer text-[10px] font-bold text-white">
@@ -80,7 +80,7 @@ export default function StudentSettingsPage() {
           </div>
 
           <div className="flex-1 space-y-2">
-            <p className="text-xs text-slate-400">Upload a custom profile picture (PFP) or change your name shown across the LMS</p>
+            <p className="text-xs text-theme-sub">Upload a custom profile picture (PFP) or change your name shown across the LMS</p>
             <form onSubmit={handleSaveName} className="flex items-center space-x-3">
               <input
                 type="text"
@@ -88,7 +88,7 @@ export default function StudentSettingsPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Enter your full name..."
-                className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+                className="flex-1 px-4 py-2 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
               />
               <button
                 type="submit"
@@ -107,14 +107,14 @@ export default function StudentSettingsPage() {
         <UserProfile
           appearance={{
             elements: {
-              card: 'bg-slate-900 border border-slate-800 shadow-2xl text-white',
-              navbar: 'border-r border-slate-800 bg-slate-950/50',
-              navbarButton: 'text-slate-300 hover:text-white',
-              headerTitle: 'text-white font-bold',
-              headerSubtitle: 'text-slate-400',
-              profileSectionTitleText: 'text-slate-200 font-semibold',
-              userPreviewMainIdentifier: 'text-white font-bold',
-              userPreviewSecondaryIdentifier: 'text-slate-400',
+              card: 'bg-theme-card border border-theme shadow-2xl text-theme-main',
+              navbar: 'border-r border-theme bg-theme-card-sub',
+              navbarButton: 'text-theme-sub hover:text-theme-main',
+              headerTitle: 'text-theme-main font-bold',
+              headerSubtitle: 'text-theme-sub',
+              profileSectionTitleText: 'text-theme-main font-semibold',
+              userPreviewMainIdentifier: 'text-theme-main font-bold',
+              userPreviewSecondaryIdentifier: 'text-theme-sub',
               formButtonPrimary: 'bg-indigo-600 hover:bg-indigo-500 text-white',
             },
           }}

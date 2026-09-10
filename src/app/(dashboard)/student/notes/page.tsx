@@ -24,40 +24,40 @@ export default function StudentNotesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-          <BookOpen className="w-7 h-7 text-indigo-400" />
+        <h1 className="text-2xl font-bold text-theme-main flex items-center space-x-2">
+          <BookOpen className="w-7 h-7 text-indigo-500" />
           <span>Notes Vault & Study Guides</span>
         </h1>
-        <p className="text-sm text-slate-400 mt-1">Access and download lesson presentations, PDFs, and study guides for your batch</p>
+        <p className="text-sm text-theme-sub mt-1">Access and download lesson presentations, PDFs, and study guides for your batch</p>
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-slate-400 animate-pulse">Loading study notes...</div>
+        <div className="py-12 text-center text-theme-sub animate-pulse">Loading study notes...</div>
       ) : materials.length === 0 ? (
-        <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-2xl">
-          <File className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-300">No Course Materials Found</h3>
-          <p className="text-sm text-slate-500 mt-1">Your teacher has not uploaded any study guides for your batch yet.</p>
+        <div className="p-12 text-center bg-theme-card border border-theme rounded-2xl shadow-sm">
+          <File className="w-12 h-12 text-theme-sub mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-theme-main">No Course Materials Found</h3>
+          <p className="text-sm text-theme-sub mt-1">Your teacher has not uploaded any study guides for your batch yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {materials.map((m) => (
-            <div key={m.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
+            <div key={m.id} className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
-                  <div className="p-3 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/20">
+                  <div className="p-3 bg-indigo-600/20 text-indigo-500 rounded-xl border border-indigo-500/20">
                     <FileText className="w-6 h-6" />
                   </div>
                   <div>
-                    <span className="px-2 py-0.5 bg-slate-800 text-indigo-300 border border-slate-700 rounded text-xs font-mono font-bold">
+                    <span className="px-2 py-0.5 bg-theme-card-sub text-indigo-600 dark:text-indigo-300 border border-theme rounded text-xs font-mono font-bold">
                       {(m.fileType || 'file').toUpperCase()}
                     </span>
-                    <h3 className="font-bold text-white text-base mt-1">{m.title}</h3>
+                    <h3 className="font-bold text-theme-main text-base mt-1">{m.title}</h3>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-400">{m.description || 'No additional details.'}</p>
-                <div className="text-xs text-slate-500">Size: {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB</div>
+                <p className="text-xs text-theme-sub">{m.description || 'No additional details.'}</p>
+                <div className="text-xs text-theme-sub opacity-75">Size: {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB</div>
               </div>
 
               <a

@@ -29,23 +29,23 @@ export default function StudentTimelinePage() {
   return (
     <div className="space-y-6">
       {/* Student Welcome Header */}
-      <div className="bg-gradient-to-r from-indigo-900/60 to-purple-900/60 border border-indigo-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="bg-gradient-to-r from-indigo-900/80 to-purple-900/80 border border-indigo-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6 text-white">
         <div>
-          <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-mono font-bold tracking-wider">
+          <span className="px-3 py-1 bg-indigo-500/30 text-indigo-200 border border-indigo-500/30 rounded-full text-xs font-mono font-bold tracking-wider">
             STUDENT PORTAL
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">
             Welcome back, {displayName}! 👋
           </h1>
-          <p className="text-sm text-slate-300 mt-1">
+          <p className="text-sm text-slate-200 mt-1">
             Batch: <span className="font-semibold text-indigo-300">{batch?.name || 'Unassigned Batch'}</span> ({batch?.cefrLevel || 'CEFR Level Pending'})
           </p>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-center space-x-4 self-start sm:self-auto">
+        <div className="bg-slate-900/60 backdrop-blur border border-indigo-500/30 rounded-xl p-4 flex items-center space-x-4 self-start sm:self-auto">
           <Award className="w-10 h-10 text-amber-400" />
           <div>
-            <div className="text-xs text-slate-400 uppercase font-semibold">Total Earned Points</div>
+            <div className="text-xs text-slate-300 uppercase font-semibold">Total Earned Points</div>
             <div className="text-2xl font-black text-amber-400 font-mono">{profile?.points || 0} PTS</div>
           </div>
         </div>
@@ -53,25 +53,25 @@ export default function StudentTimelinePage() {
 
       {/* Class Schedule & Live Zoom Button */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 animate-pulse">Loading batch schedule...</div>
+        <div className="py-12 text-center text-theme-sub animate-pulse">Loading batch schedule...</div>
       ) : !batch ? (
-        <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-2xl">
-          <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-300">No Batch Assigned Yet</h3>
-          <p className="text-sm text-slate-500 mt-1">Please ask your teacher to assign you to a batch in the Roster manager.</p>
+        <div className="p-8 text-center bg-theme-card border border-theme rounded-2xl shadow-lg">
+          <BookOpen className="w-12 h-12 text-theme-sub mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-theme-main">No Batch Assigned Yet</h3>
+          <p className="text-sm text-theme-sub mt-1">Please ask your teacher to assign you to a batch in the Roster manager.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Live Zoom Call Action Box */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
+          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
             <div>
-              <div className="flex items-center space-x-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <div className="flex items-center space-x-2 text-emerald-500 font-bold text-xs uppercase tracking-wider mb-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                 <span>Live Zoom Meeting Room</span>
               </div>
 
-              <h2 className="text-xl font-bold text-white mb-2">{batch.name} Live Class</h2>
-              <p className="text-sm text-slate-300">
+              <h2 className="text-xl font-bold text-theme-main mb-2">{batch.name} Live Class</h2>
+              <p className="text-sm text-theme-sub">
                 Click the button below to join your batch's interactive live video session.
               </p>
             </div>
@@ -88,30 +88,30 @@ export default function StudentTimelinePage() {
                 <ExternalLink className="w-4 h-4 ml-1" />
               </a>
             ) : (
-              <div className="p-4 bg-slate-800/60 rounded-xl text-xs text-slate-400 text-center border border-slate-700/50">
+              <div className="p-4 bg-theme-card-sub rounded-xl text-xs text-theme-sub text-center border border-theme">
                 Zoom link has not been posted by your teacher for this batch yet.
               </div>
             )}
           </div>
 
           {/* Schedule Timeline */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-indigo-400" />
+          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 className="text-lg font-bold text-theme-main flex items-center space-x-2">
+              <Calendar className="w-5 h-5 text-indigo-500" />
               <span>Weekly Class Schedule</span>
             </h2>
 
-            <div className="p-4 bg-slate-800/60 rounded-xl border border-slate-700/60 space-y-2">
-              <div className="flex items-center space-x-2 text-indigo-300 text-xs font-semibold">
+            <div className="p-4 bg-theme-card-sub rounded-xl border border-theme space-y-2">
+              <div className="flex items-center space-x-2 text-indigo-500 dark:text-indigo-400 text-xs font-semibold">
                 <Clock className="w-4 h-4" />
                 <span>Timings Info</span>
               </div>
-              <p className="text-base font-semibold text-white">
+              <p className="text-base font-semibold text-theme-main">
                 {batch.scheduleInfo || 'No live schedule info specified.'}
               </p>
             </div>
 
-            <div className="text-xs text-slate-400 space-y-1 pt-2">
+            <div className="text-xs text-theme-sub space-y-1 pt-2">
               <p>💡 Tip: Ensure you arrive 5 minutes before class start time with your study notes ready.</p>
             </div>
           </div>

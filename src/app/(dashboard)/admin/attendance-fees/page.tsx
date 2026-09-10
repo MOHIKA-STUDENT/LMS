@@ -124,20 +124,20 @@ export default function AttendanceFeesPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-            <CreditCard className="w-7 h-7 text-indigo-400" />
+          <h1 className="text-2xl font-bold text-theme-main flex items-center space-x-2">
+            <CreditCard className="w-7 h-7 text-indigo-500" />
             <span>Attendance & Fee Tracker</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Manage batch presence records and student fee payments</p>
+          <p className="text-sm text-theme-sub mt-1">Manage batch presence records and student fee payments</p>
         </div>
 
         {/* Batch Selector */}
         <div className="flex items-center space-x-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase">Batch:</label>
+          <label className="text-xs font-semibold text-theme-sub uppercase">Batch:</label>
           <select
             value={selectedBatchId}
             onChange={(e) => setSelectedBatchId(e.target.value)}
-            className="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 font-semibold"
+            className="px-4 py-2 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500 font-semibold"
           >
             {batches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -149,13 +149,13 @@ export default function AttendanceFeesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-3 border-b border-slate-800 pb-2">
+      <div className="flex space-x-3 border-b border-theme pb-2">
         <button
           onClick={() => setActiveTab('attendance')}
           className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
             activeTab === 'attendance'
-              ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              ? 'bg-indigo-600/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/40 font-bold'
+              : 'text-theme-sub hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-theme-main'
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -166,8 +166,8 @@ export default function AttendanceFeesPage() {
           onClick={() => setActiveTab('fees')}
           className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
             activeTab === 'fees'
-              ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              ? 'bg-indigo-600/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/40 font-bold'
+              : 'text-theme-sub hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-theme-main'
           }`}
         >
           <CreditCard className="w-4 h-4" />
@@ -177,29 +177,29 @@ export default function AttendanceFeesPage() {
 
       {/* ATTENDANCE PANEL */}
       {activeTab === 'attendance' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-lg font-bold text-theme-main flex items-center space-x-2">
+              <Calendar className="w-5 h-5 text-indigo-500" />
               <span>Mark Student Attendance</span>
             </h2>
             <div className="flex items-center space-x-2">
-              <label className="text-xs font-semibold text-slate-400">Date:</label>
+              <label className="text-xs font-semibold text-theme-sub">Date:</label>
               <input
                 type="date"
                 value={attendanceDate}
                 onChange={(e) => setAttendanceDate(e.target.value)}
-                className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono"
+                className="px-3 py-1.5 bg-theme-input border border-theme rounded-xl text-theme-main text-xs font-mono"
               />
             </div>
           </div>
 
           {loading ? (
-            <div className="py-8 text-center text-slate-400 animate-pulse">Loading batch roster...</div>
+            <div className="py-8 text-center text-theme-sub animate-pulse">Loading batch roster...</div>
           ) : batchStudents.length === 0 ? (
-            <p className="text-center py-6 text-sm text-slate-500">No students assigned to this batch yet.</p>
+            <p className="text-center py-6 text-sm text-theme-sub">No students assigned to this batch yet.</p>
           ) : (
-            <div className="divide-y divide-slate-800">
+            <div className="divide-y divide-theme">
               {batchStudents.map((student) => {
                 const existingRec = attendanceRecords.find(
                   (r) => r.studentId === student.id && new Date(r.date).toISOString().split('T')[0] === attendanceDate
@@ -209,8 +209,8 @@ export default function AttendanceFeesPage() {
                 return (
                   <div key={student.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="font-bold text-white text-sm">{student.fullName}</h3>
-                      <p className="text-xs text-slate-400">{student.email}</p>
+                      <h3 className="font-bold text-theme-main text-sm">{student.fullName}</h3>
+                      <p className="text-xs text-theme-sub">{student.email}</p>
                     </div>
 
                     <div className="flex items-center space-x-2">
@@ -218,11 +218,11 @@ export default function AttendanceFeesPage() {
                         onClick={() => handleMarkAttendance(student.id, 'PRESENT')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all ${
                           currentStatus === 'PRESENT'
-                            ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500'
-                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                            ? 'bg-emerald-600/30 text-emerald-600 dark:text-emerald-300 border border-emerald-500'
+                            : 'bg-theme-card-sub text-theme-sub hover:opacity-90 border border-theme'
                         }`}
                       >
-                        <CheckCircle className="w-3.5 h-3.5" />
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
                         <span>Present</span>
                       </button>
 
@@ -230,11 +230,11 @@ export default function AttendanceFeesPage() {
                         onClick={() => handleMarkAttendance(student.id, 'LATE')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all ${
                           currentStatus === 'LATE'
-                            ? 'bg-amber-600/30 text-amber-300 border border-amber-500'
-                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                            ? 'bg-amber-600/30 text-amber-600 dark:text-amber-300 border border-amber-500'
+                            : 'bg-theme-card-sub text-theme-sub hover:opacity-90 border border-theme'
                         }`}
                       >
-                        <Clock className="w-3.5 h-3.5" />
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
                         <span>Late</span>
                       </button>
 
@@ -242,11 +242,11 @@ export default function AttendanceFeesPage() {
                         onClick={() => handleMarkAttendance(student.id, 'ABSENT')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all ${
                           currentStatus === 'ABSENT'
-                            ? 'bg-rose-600/30 text-rose-300 border border-rose-500'
-                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                            ? 'bg-rose-600/30 text-rose-600 dark:text-rose-300 border border-rose-500'
+                            : 'bg-theme-card-sub text-theme-sub hover:opacity-90 border border-theme'
                         }`}
                       >
-                        <XCircle className="w-3.5 h-3.5" />
+                        <XCircle className="w-3.5 h-3.5 text-rose-500" />
                         <span>Absent</span>
                       </button>
                     </div>
@@ -260,16 +260,16 @@ export default function AttendanceFeesPage() {
 
       {/* FEES PANEL */}
       {activeTab === 'fees' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-          <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-            <CreditCard className="w-5 h-5 text-indigo-400" />
+        <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-6">
+          <h2 className="text-lg font-bold text-theme-main flex items-center space-x-2">
+            <CreditCard className="w-5 h-5 text-indigo-500" />
             <span>Student Fee Records</span>
           </h2>
 
           {loading ? (
-            <div className="py-8 text-center text-slate-400 animate-pulse">Loading fee records...</div>
+            <div className="py-8 text-center text-theme-sub animate-pulse">Loading fee records...</div>
           ) : batchStudents.length === 0 ? (
-            <p className="text-center py-6 text-sm text-slate-500">No students in this batch.</p>
+            <p className="text-center py-6 text-sm text-theme-sub">No students in this batch.</p>
           ) : (
             <div className="space-y-4">
               {batchStudents.map((student) => {
@@ -281,20 +281,20 @@ export default function AttendanceFeesPage() {
                 };
 
                 return (
-                  <div key={student.id} className="p-4 bg-slate-800/60 border border-slate-700/60 rounded-xl space-y-3">
+                  <div key={student.id} className="p-4 bg-theme-card-sub border border-theme rounded-xl space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <h3 className="font-bold text-white text-sm">{student.fullName}</h3>
-                        <p className="text-xs text-slate-400">{student.email}</p>
+                        <h3 className="font-bold text-theme-main text-sm">{student.fullName}</h3>
+                        <p className="text-xs text-theme-sub">{student.email}</p>
                       </div>
 
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold w-fit ${
                           state.status === 'PAID'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
                             : state.status === 'OVERDUE'
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/40'
+                            : 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
                         }`}
                       >
                         {state.status}
@@ -303,7 +303,7 @@ export default function AttendanceFeesPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Amount ($)</label>
+                        <label className="block text-[10px] font-semibold text-theme-sub uppercase mb-1">Amount ($)</label>
                         <input
                           type="number"
                           value={state.amount}
@@ -313,12 +313,12 @@ export default function AttendanceFeesPage() {
                               [student.id]: { ...state, amount: parseFloat(e.target.value) || 0 },
                             }))
                           }
-                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
+                          className="w-full px-3 py-1.5 bg-theme-input border border-theme rounded-lg text-xs text-theme-main"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Payment Status</label>
+                        <label className="block text-[10px] font-semibold text-theme-sub uppercase mb-1">Payment Status</label>
                         <select
                           value={state.status}
                           onChange={(e) =>
@@ -327,7 +327,7 @@ export default function AttendanceFeesPage() {
                               [student.id]: { ...state, status: e.target.value as any },
                             }))
                           }
-                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
+                          className="w-full px-3 py-1.5 bg-theme-input border border-theme rounded-lg text-xs text-theme-main"
                         >
                           <option value="PAID">Paid</option>
                           <option value="PENDING">Pending</option>
@@ -336,7 +336,7 @@ export default function AttendanceFeesPage() {
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Due Date</label>
+                        <label className="block text-[10px] font-semibold text-theme-sub uppercase mb-1">Due Date</label>
                         <input
                           type="date"
                           value={state.dueDate}
@@ -346,7 +346,7 @@ export default function AttendanceFeesPage() {
                               [student.id]: { ...state, dueDate: e.target.value },
                             }))
                           }
-                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white font-mono"
+                          className="w-full px-3 py-1.5 bg-theme-input border border-theme rounded-lg text-xs text-theme-main font-mono"
                         />
                       </div>
 

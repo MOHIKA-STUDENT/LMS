@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className="dark">
-        <body className={`${inter.className} min-h-screen bg-slate-950 text-slate-100 antialiased`}>
+        <body className={`${inter.className} min-h-screen bg-theme-main text-theme-main antialiased transition-colors duration-200`}>
           <ThemeProvider>
             {children}
             <Toaster position="top-right" theme="dark" richColors />
