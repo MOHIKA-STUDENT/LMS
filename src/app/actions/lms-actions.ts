@@ -130,6 +130,14 @@ export async function deleteStudentAction(studentId: string) {
 // ==========================================
 export async function getMaterialsAction(batchId?: string) {
   try {
+    const user = await currentUser();
+    if (user) {
+      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+      if (profile && profile.isActive === false) {
+        return { success: false, error: 'Access revoked. Your account is inactive.' };
+      }
+    }
+
     const materials = await prisma.courseMaterial.findMany({
       where: batchId
         ? {
@@ -261,6 +269,14 @@ export async function getLeaderboardAction() {
 // ==========================================
 export async function getQuizzesAction(batchId?: string) {
   try {
+    const user = await currentUser();
+    if (user) {
+      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+      if (profile && profile.isActive === false) {
+        return { success: false, error: 'Access revoked. Your account is inactive.' };
+      }
+    }
+
     const quizzes = await prisma.quiz.findMany({
       where: batchId
         ? {
@@ -539,6 +555,14 @@ export async function createRecordedSessionAction(data: {
 
 export async function getRecordedSessionsAction(batchId?: string) {
   try {
+    const user = await currentUser();
+    if (user) {
+      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+      if (profile && profile.isActive === false) {
+        return { success: false, error: 'Access revoked. Your account is inactive.' };
+      }
+    }
+
     const sessions = await prisma.recordedSession.findMany({
       where: batchId ? { batchId } : undefined,
       include: {
