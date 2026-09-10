@@ -938,12 +938,83 @@ export async function logVideoWatchProgressAction(
 export async function getAssignmentsAction(batchId?: string) {
   try {
     const assignments = await prisma.assignment.findMany({
-      where: batchId ? { batchId } : undefined,
+      where: batchId && batchId !== 'ALL' ? { batchId } : undefined,
+      include: {
+        batch: true,
+        submissions: {
+          select: { id: true, studentId: true, scoreAwarded: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
     return { success: true, assignments };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to fetch assignments.' };
+  }
+}
+
+export async function createAssignmentAction(data: {
+  batchId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+}) {
+  try {
+    if (!data.batchId || !data.title || !data.dueDate) {
+      return { success: false, error: 'Missing required assignment fields (Batch, Title, Due Date).' };
+    }
+
+    const assignment = await prisma.assignment.create({
+      data: {
+        batchId: data.batchId,
+        title: data.title,
+        description: data.description || '',
+        dueDate: new Date(data.dueDate),
+      },
+    });
+
+    return { success: true, assignment };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to create assignment.' };
+  }
+}
+
+export async function updateAssignmentAction(data: {
+  id: string;
+  batchId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+}) {
+  try {
+    if (!data.id || !data.title || !data.dueDate) {
+      return { success: false, error: 'Missing required assignment fields.' };
+    }
+
+    const assignment = await prisma.assignment.update({
+      where: { id: data.id },
+      data: {
+        batchId: data.batchId,
+        title: data.title,
+        description: data.description || '',
+        dueDate: new Date(data.dueDate),
+      },
+    });
+
+    return { success: true, assignment };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update assignment.' };
+  }
+}
+
+export async function deleteAssignmentAction(id: string) {
+  try {
+    await prisma.assignment.delete({
+      where: { id },
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to delete assignment.' };
   }
 }
 
