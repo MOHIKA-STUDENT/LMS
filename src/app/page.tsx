@@ -18,26 +18,26 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-theme-main text-theme-main flex flex-col justify-between transition-colors duration-200">
-      {/* Header */}
-      <header className="container mx-auto px-4 h-16 sm:h-20 flex items-center justify-between border-b border-theme gap-2">
-        <div className="flex items-center space-x-1.5 sm:space-x-2 font-extrabold text-base sm:text-xl text-indigo-500 shrink-0">
-          <BookOpen className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-500" />
-          <span className="truncate max-w-[150px] sm:max-w-none">
+      {/* Responsive Non-Overflowing Header */}
+      <header className="container mx-auto px-3 sm:px-4 h-16 sm:h-20 flex items-center justify-between border-b border-theme gap-1 sm:gap-2">
+        <div className="flex items-center space-x-1 sm:space-x-2 font-extrabold text-sm sm:text-xl text-indigo-500 shrink-0">
+          <BookOpen className="w-5 h-5 sm:w-8 sm:h-8 text-indigo-500 shrink-0" />
+          <span className="truncate max-w-[130px] sm:max-w-none">
             English<span className="text-theme-main">Academy</span>
           </span>
         </div>
 
-        <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+        <div className="flex items-center space-x-1 sm:space-x-3 shrink-0">
           <ThemeToggle />
           <Link
             href="/login"
-            className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-theme-sub hover:text-theme-main bg-theme-card-sub border border-theme rounded-xl transition-all whitespace-nowrap"
+            className="px-2 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-sm font-semibold text-theme-sub hover:text-theme-main bg-theme-card-sub border border-theme rounded-xl transition-all whitespace-nowrap"
           >
             Sign In
           </Link>
           <Link
             href="/register"
-            className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-600/30 transition-all whitespace-nowrap"
+            className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-600/30 transition-all whitespace-nowrap"
           >
             Get Started
           </Link>
@@ -46,7 +46,7 @@ export default async function HomePage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-10 sm:py-16 text-center max-w-4xl space-y-6 sm:space-y-8">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 sm:px-4 sm:py-1.5 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-indigo-600 dark:text-indigo-300 text-[11px] sm:text-xs font-semibold max-w-full overflow-hidden truncate">
+        <div className="inline-flex items-center space-x-2 px-3 py-1 sm:px-4 sm:py-1.5 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-indigo-600 dark:text-indigo-300 text-[11px] sm:text-xs font-semibold max-w-full overflow-hidden">
           <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
           <span className="truncate">Next.js 16 • Clerk Auth • Neon PostgreSQL • Cloudinary • Gemini AI</span>
         </div>

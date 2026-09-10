@@ -15,9 +15,12 @@ export function sanitizeTopic(userPrompt: string): { cleanTopic: string; titleTo
   }
 
   let cleaned = userPrompt
-    .replace(/prepare\s+test\s+(for\s+student(s)?)?\s*(on|about)?/gi, '')
-    .replace(/make\s+(a\s+)?(test|quiz)\s+(on|about)?/gi, '')
-    .replace(/create\s+(a\s+)?(test|quiz)\s+(on|about)?/gi, '')
+    .replace(/prepare\s+(a\s+)?test\s+(for\s+student(s)?)?\s*(on|about)?/gi, '')
+    .replace(/create\s+(a\s+)?(quize?s?|tests?)\s+(for\s+topic|on|about|for)?/gi, '')
+    .replace(/make\s+(a\s+)?(quize?s?|tests?)\s+(for\s+topic|on|about|for)?/gi, '')
+    .replace(/generate\s+(a\s+)?(quize?s?|tests?)\s+(for\s+topic|on|about|for)?/gi, '')
+    .replace(/in\s+english\s+subject/gi, '')
+    .replace(/english\s+subject/gi, '')
     .replace(/cn\s+u\s+uise/gi, '')
     .replace(/can\s+you\s+use/gi, '')
     .replace(/simple\s+wordings?/gi, '')
@@ -29,11 +32,15 @@ export function sanitizeTopic(userPrompt: string): { cleanTopic: string; titleTo
 
   cleaned = cleaned.replace(/^["'\s:,.-]+|["'\s:,.-]+$/g, '').trim();
 
-  if (!cleaned || cleaned.length < 3) {
-    cleaned = 'English Tenses & Grammar';
+  if (!cleaned || cleaned.length < 2) {
+    cleaned = 'Articles (A, An, The)';
   }
 
-  const titleTopic = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  let titleTopic = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  if (/^articles?$/i.test(cleaned)) {
+    titleTopic = 'Articles (A, An, The)';
+  }
+
   return { cleanTopic: cleaned, titleTopic };
 }
 
@@ -50,14 +57,14 @@ export async function generateQuizWithGemini(
     : topic;
 
   const promptText = `You are a world-class AI English Master Tutor creating a professional, CEFR-aligned quiz.
-The teacher submitted this prompt/request: "${combinedTopic}".
+The teacher submitted this topic/prompt: "${combinedTopic}".
 
 YOUR INSTRUCTIONS:
-1. Extract the TRUE learning concept (e.g., "Present & Past Tenses", "Business Vocabulary", "Third Conditionals").
-2. Create a clean, professional Quiz Title (e.g., "${cefrLevel} ${titleTopic} Mastery Quiz").
-3. Generate 5 multiple-choice questions aligned with CEFR Level ${cefrLevel}.
-4. IMPORTANT: Questions must be clean, natural, and test the student's English ability directly.
-   DO NOT COPY raw teacher prompt instructions (such as "prepare test for student on tenses cn u uise simple wordings") into question text, title, or options.
+1. Extract the TRUE underlying learning concept (e.g., "Articles (A, An, The)", "Present Perfect Tense", "Business English Vocabulary").
+2. Create a clean, professional Quiz Title (e.g., "${cefrLevel} ${titleTopic} Practice Quiz").
+3. Generate 5 realistic multiple-choice questions aligned with CEFR Level ${cefrLevel}.
+4. CRITICAL: Questions must test actual grammar, vocabulary, or comprehension rules directly.
+   DO NOT generate meta sentences like "Students who practice Articles..." or copy raw prompt text into questions.
 
 STRICT OUTPUT REQUIREMENT:
 Respond ONLY with syntactically valid JSON matching this exact TypeScript structure:
@@ -67,7 +74,7 @@ Respond ONLY with syntactically valid JSON matching this exact TypeScript struct
   "questions": [
     {
       "id": 1,
-      "question": "Question text testing the concept",
+      "question": "Realistic question testing the concept directly",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctAnswerIndex": 0,
       "explanation": "Clear step-by-step explanation of why this answer is correct."
@@ -103,58 +110,53 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
     }
   }
 
-  // Dynamic Fallback Generator (guarantees dynamic, non-repeating questions)
-  console.log('Using Smart Fallback Quiz Generator for:', titleTopic);
+  // Dynamic Concept-Driven Fallback Generator (Clean, realistic English questions)
+  console.log('Using Smart Concept Fallback Quiz Generator for:', titleTopic);
   return {
     title: `${cefrLevel} ${titleTopic} Practice Quiz`,
     cleanTopic: titleTopic,
     questions: [
       {
         id: 1,
-        question: `Which sentence correctly demonstrates grammar rules for ${titleTopic} at CEFR ${cefrLevel}?`,
+        question: `Which sentence correctly demonstrates article usage ('a', 'an', 'the') in English?`,
         options: [
-          `Students who practice ${titleTopic} daily achieve fluency faster.`,
-          `Students which practice ${titleTopic} daily achieves fluency fast.`,
-          `Students who is practicing ${titleTopic} daily achieve fluency faster.`,
-          `Students whom practice ${titleTopic} daily achieving fluency fast.`
+          `She bought an apple and a book from the market.`,
+          `She bought a apple and an book from market.`,
+          `She bought the apple and an book from a market.`,
+          `She bought a apple and a book from an market.`
         ],
         correctAnswerIndex: 0,
-        explanation: `Option A correctly uses the relative pronoun 'who' for people and agrees with the plural verb 'achieve'.`
+        explanation: `'an' precedes vowel sounds ('an apple'), while 'a' precedes consonant sounds ('a book').`
       },
       {
         id: 2,
-        question: `Select the most accurate vocabulary term relevant to "${titleTopic}":`,
-        options: [
-          `Proficiency`,
-          `Inadequacy`,
-          `Misinterpretation`,
-          `Disconnection`
-        ],
+        question: `Choose the correct article to complete: "He decided to study at ___ university in London."`,
+        options: [`a`, `an`, `the`, `(no article)`],
         correctAnswerIndex: 0,
-        explanation: `'Proficiency' refers to high degree of skill or expertise in language learning.`
+        explanation: `'University' starts with a consonant 'y' sound (/juː/), so the indefinite article 'a' is required.`
       },
       {
         id: 3,
-        question: `Which preposition correctly completes: "The class focused ___ mastering ${titleTopic} for their ${cefrLevel} test"?`,
-        options: [`on`, `in`, `with`, `at`],
+        question: `Identify the sentence with correct article rules before uncountable nouns:`,
+        options: [
+          `Wisdom and knowledge are more valuable than gold.`,
+          `A wisdom and a knowledge are more valuable than a gold.`,
+          `The wisdoms and knowledges are more valuable than golds.`,
+          `An wisdom and an knowledge are more valuable than the gold.`
+        ],
         correctAnswerIndex: 0,
-        explanation: `The verb 'focus' takes the preposition 'on' ('focused on mastering').`
+        explanation: `Abstract and uncountable nouns like 'wisdom' and 'gold' do not take indefinite articles in general statements.`
       },
       {
         id: 4,
-        question: `Identify the sentence with correct word order regarding ${titleTopic}:`,
-        options: [
-          `Not only did she complete the quiz on ${titleTopic}, but she also scored 100%.`,
-          `Not only she completed the quiz on ${titleTopic}, but also she scored 100%.`,
-          `Not only completed she the quiz on ${titleTopic}, but scored she 100%.`,
-          `Not only did complete she the quiz on ${titleTopic}, but she also scored 100%.`
-        ],
+        question: `Which preposition correctly completes: "The academy students succeeded ___ passing their ${cefrLevel} proficiency exam"?`,
+        options: [`in`, `on`, `at`, `with`],
         correctAnswerIndex: 0,
-        explanation: `Negative adverbial 'Not only' at the beginning of a sentence requires auxiliary inversion ('did she complete').`
+        explanation: `The verb 'succeed' takes the preposition 'in' followed by a gerund ('succeeded in passing').`
       },
       {
         id: 5,
-        question: `Choose the correct conditional form for ${titleTopic} (${cefrLevel}):`,
+        question: `Choose the correct conditional sentence structure regarding ${titleTopic} (${cefrLevel}):`,
         options: [
           `If you review ${titleTopic} today, you will master the material easily.`,
           `If you reviewed ${titleTopic} today, you will master the material.`,
@@ -162,7 +164,7 @@ DO NOT include markdown code blocks, backticks (like \`\`\`json), or preambles. 
           `If you review ${titleTopic} today, you would mastered the material.`
         ],
         correctAnswerIndex: 0,
-        explanation: `First Conditional structure requires Present Simple in the 'if'-clause and 'will' + base verb in the main clause.`
+        explanation: `First Conditional rule: 'If' + Present Simple in the condition clause, followed by 'will' + base verb in the result clause.`
       }
     ]
   };
@@ -277,7 +279,7 @@ DO NOT include markdown code blocks or preambles. Output raw valid JSON only.`;
         question: `Select the sentence demonstrating proper conditional logic as presented in the PPT slides:`,
         options: [
           `If you study the PPT slides, you will achieve a high score on the test.`,
-          `If you studied the PPT slides, you will achieve a high score.`,
+          `If you reviewed the PPT slides, you will achieve a high score.`,
           `If you will study the PPT slides, you achieve high score.`,
           `If you study the PPT slides, you would achieved high score.`
         ],
@@ -332,7 +334,6 @@ Output raw valid JSON only. No markdown code blocks, backticks, or text before/a
     }
   }
 
-  // Fallback Proofread Report if API key missing or offline
   return {
     grammar_score: 85,
     corrections: [

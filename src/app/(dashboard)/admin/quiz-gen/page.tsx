@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { generateQuizAction, generateQuizFromPPTAction, parseRawQuizTextAction } from '@/app/actions/ai-actions';
 import { getBatchesAction, getQuizzesAction, createManualQuizAction, getTeacherQuizAnalyticsAction } from '@/app/actions/lms-actions';
 import { CEFRLevel } from '@prisma/client';
-import { Sparkles, Bot, CheckCircle2, Plus, Eye, BookOpen, Send, Edit3, Globe, Trash2, FileCode, Presentation, FileText } from 'lucide-react';
+import { Sparkles, Bot, CheckCircle2, Plus, Eye, BookOpen, Send, Edit3, Globe, Trash2, FileCode, Presentation, FileText, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function QuizGenPage() {
@@ -22,6 +22,22 @@ export default function QuizGenPage() {
   // PPT / Slide Content State
   const [pptText, setPptText] = useState('');
   const [generatingPPT, setGeneratingPPT] = useState(false);
+
+  const handlePPTFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      if (text) {
+        const clean = text.replace(/[\x00-\x09\x0B-\x1F\x7F-\x9F]/g, ' ').replace(/\s+/g, ' ').trim();
+        setPptText(clean.slice(0, 4000));
+        toast.success(`Loaded "${file.name}" into PPT builder! Click Generate below.`);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // Google Forms / Raw Text State
   const [rawText, setRawText] = useState('');
@@ -356,6 +372,25 @@ export default function QuizGenPage() {
                 <option value="C1">C1 - Advanced</option>
                 <option value="C2">C2 - Mastery</option>
               </select>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl">
+              <div>
+                <p className="text-xs font-bold text-purple-600 dark:text-purple-300 flex items-center gap-1.5">
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Upload PPT / Document File</span>
+                </p>
+                <p className="text-[10px] text-theme-sub mt-0.5">Select a .pptx, .pdf, .docx, or .txt file to automatically extract text into quiz generator</p>
+              </div>
+              <label className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold cursor-pointer transition-all shadow-md shrink-0">
+                <span>Browse File</span>
+                <input
+                  type="file"
+                  accept=".txt,.pdf,.pptx,.ppt,.docx"
+                  onChange={handlePPTFileUpload}
+                  className="hidden"
+                />
+              </label>
             </div>
 
             <textarea
