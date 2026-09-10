@@ -20,13 +20,19 @@ const isStudentRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  // Allow static manifest & public assets directly
+  if (
+    req.nextUrl.pathname === '/manifest.json' ||
+    req.nextUrl.pathname === '/favicon.ico' ||
+    req.nextUrl.pathname === '/sw.js' ||
+    req.nextUrl.pathname.startsWith('/icon-') ||
+    req.nextUrl.pathname.startsWith('/apple-touch-icon')
+  ) {
+    return NextResponse.next();
+  }
+
   try {
     const { userId, sessionClaims } = await auth();
-
-    // Allow static manifest & public assets directly
-    if (req.nextUrl.pathname === '/manifest.json' || req.nextUrl.pathname === '/favicon.ico') {
-      return NextResponse.next();
-    }
 
     // If trying to access protected route without logging in
     if (!isPublicRoute(req) && !userId) {
@@ -52,6 +58,9 @@ export default clerkMiddleware(async (auth, req) => {
     }
   } catch (err) {
     console.warn('Middleware execution notice:', err);
+    if (!isPublicRoute(req)) {
+      return NextResponse.redirect(new URL('/login', req.url));
+    }
   }
 
   return NextResponse.next();
