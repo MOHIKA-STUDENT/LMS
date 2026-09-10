@@ -5,19 +5,24 @@ import { prisma } from '@/lib/db/prisma';
 import { generateQuizWithGemini, proofreadHomeworkWithGemini } from '@/lib/ai/gemini';
 import { CEFRLevel } from '@prisma/client';
 
-export async function generateQuizAction(batchId: string, cefrLevel: CEFRLevel, topic: string) {
+export async function generateQuizAction(
+  batchId: string,
+  cefrLevel: CEFRLevel,
+  topic: string,
+  customPrompt?: string
+) {
   try {
     const user = await currentUser();
     if (!user) {
       return { success: false, error: 'Unauthorized. Please log in.' };
     }
 
-    const role = (user.publicMetadata as any)?.role || 'STUDENT';
+    const role = (user.publicMetadata as any)?.role || (user.unsafeMetadata as any)?.role || 'STUDENT';
     if (role !== 'TEACHER') {
       return { success: false, error: 'Only teachers can generate AI quizzes.' };
     }
 
-    const quizData = await generateQuizWithGemini(topic, cefrLevel as any);
+    const quizData = await generateQuizWithGemini(topic, cefrLevel as any, customPrompt);
 
     const insertedQuiz = await prisma.quiz.create({
       data: {

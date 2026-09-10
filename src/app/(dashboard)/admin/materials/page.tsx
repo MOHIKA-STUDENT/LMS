@@ -42,14 +42,16 @@ export default function MaterialsPage() {
     fetchData();
   }, []);
 
+  const [isGlobal, setIsGlobal] = useState(false);
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
       toast.error('Please select a file to upload.');
       return;
     }
-    if (!selectedBatchId) {
-      toast.error('Please select a target batch.');
+    if (!isGlobal && !selectedBatchId) {
+      toast.error('Please select a target batch or check All Batches.');
       return;
     }
 
@@ -68,7 +70,8 @@ export default function MaterialsPage() {
 
       // 2. Upload using Cloudinary via Server Action
       const formData = new FormData();
-      formData.append('batchId', selectedBatchId);
+      formData.append('batchId', isGlobal ? '' : selectedBatchId);
+      formData.append('isGlobal', isGlobal ? 'true' : 'false');
       formData.append('title', title);
       formData.append('description', description);
       formData.append('file', fileToUpload);
@@ -80,6 +83,7 @@ export default function MaterialsPage() {
       setTitle('');
       setDescription('');
       setFile(null);
+      setIsGlobal(false);
       fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Failed to upload material');
@@ -113,18 +117,32 @@ export default function MaterialsPage() {
         <h2 className="text-lg font-bold text-white mb-4">Upload New Material</h2>
         <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Target Batch</label>
-            <select
-              value={selectedBatchId}
-              onChange={(e) => setSelectedBatchId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
-            >
-              {batches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.cefrLevel})
-                </option>
-              ))}
-            </select>
+            <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Target Scope</label>
+            <div className="flex items-center space-x-3 pt-1">
+              <label className="flex items-center space-x-2 text-xs text-white cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isGlobal}
+                  onChange={(e) => setIsGlobal(e.target.checked)}
+                  className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="font-semibold text-indigo-300">All Batches (Global)</span>
+              </label>
+
+              {!isGlobal && (
+                <select
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                >
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.cefrLevel})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           <div>

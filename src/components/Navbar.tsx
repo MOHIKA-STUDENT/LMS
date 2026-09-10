@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton, useUser } from '@clerk/nextjs';
 import { Profile } from '@/types/database';
-import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LayoutDashboard, CheckSquare, Settings } from 'lucide-react';
+import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LayoutDashboard, CheckSquare, Settings, Video, CreditCard, UserCheck } from 'lucide-react';
 
 interface NavbarProps {
   profile?: Profile | null;
@@ -19,15 +19,18 @@ export default function Navbar({ profile }: NavbarProps) {
 
   const teacherLinks = [
     { href: '/admin/batches', label: 'Batches', icon: LayoutDashboard },
-    { href: '/admin/roster', label: 'Roster & Points', icon: Users },
+    { href: '/admin/roster', label: 'Roster', icon: Users },
+    { href: '/admin/attendance-fees', label: 'Attendance & Fees', icon: CreditCard },
+    { href: '/admin/recordings', label: 'Recordings', icon: Video },
     { href: '/admin/materials', label: 'Materials', icon: BookOpen },
-    { href: '/admin/quiz-gen', label: 'AI Quiz Gen', icon: Sparkles },
-    { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
+    { href: '/admin/quiz-gen', label: 'Quizzes', icon: Sparkles },
     { href: '/admin/grading', label: 'Grading', icon: CheckSquare },
   ];
 
   const studentLinks = [
     { href: '/student/timeline', label: 'Schedule', icon: Calendar },
+    { href: '/student/recordings', label: 'Recordings', icon: Video },
+    { href: '/student/fees-attendance', label: 'Fees & Attendance', icon: UserCheck },
     { href: '/student/quizzes', label: 'Quizzes', icon: Sparkles },
     { href: '/student/notes', label: 'Vault', icon: BookOpen },
     { href: '/student/homework', label: 'Homework', icon: FileText },

@@ -23,10 +23,14 @@ export default async function DashboardLayout({
 
       // Auto-create profile in Prisma if missing
       if (!profile && user.primaryEmailAddress) {
+        const emailPrefix = user.primaryEmailAddress.emailAddress.split('@')[0];
+        const formattedName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+        const displayName = user.fullName || user.firstName || formattedName;
+
         profile = await prisma.profile.create({
           data: {
             id: user.id,
-            fullName: user.fullName || user.firstName || user.primaryEmailAddress.emailAddress,
+            fullName: displayName,
             email: user.primaryEmailAddress.emailAddress,
             role: targetRole,
             isActive: true,

@@ -126,12 +126,20 @@ export async function deleteStudentAction(studentId: string) {
 }
 
 // ==========================================
-// COURSE MATERIAL ACTIONS (CLOUDINARY STORAGE)
+// COURSE MATERIAL ACTIONS (CLOUDINARY STORAGE & GLOBAL/BATCH SCOPE)
 // ==========================================
 export async function getMaterialsAction(batchId?: string) {
   try {
     const materials = await prisma.courseMaterial.findMany({
-      where: batchId ? { batchId } : undefined,
+      where: batchId
+        ? {
+            OR: [
+              { batchId },
+              { isGlobal: true },
+            ],
+          }
+        : undefined,
+      include: { batch: true },
       orderBy: { createdAt: 'desc' },
     });
     return { success: true, materials };
@@ -143,16 +151,18 @@ export async function getMaterialsAction(batchId?: string) {
 export async function uploadMaterialAction(formData: FormData) {
   try {
     const batchId = formData.get('batchId') as string;
+    const isGlobal = formData.get('isGlobal') === 'true';
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const file = formData.get('file') as File;
 
-    if (!file || !batchId || !title) {
+    if (!file || (!batchId && !isGlobal) || !title) {
       return { success: false, error: 'Missing required fields.' };
     }
 
+    const targetFolder = isGlobal ? 'materials/global' : `materials/${batchId}`;
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const uploadResult = await uploadToCloudinary(fileBuffer, file.name, `materials/${batchId}`);
+    const uploadResult = await uploadToCloudinary(fileBuffer, file.name, targetFolder);
 
     if (!uploadResult.success || !uploadResult.url) {
       return { success: false, error: uploadResult.error || 'Cloudinary upload failed.' };
@@ -160,7 +170,8 @@ export async function uploadMaterialAction(formData: FormData) {
 
     const material = await prisma.courseMaterial.create({
       data: {
-        batchId,
+        batchId: isGlobal ? null : batchId,
+        isGlobal,
         title,
         description: description || null,
         fileUrl: uploadResult.url,
@@ -230,7 +241,7 @@ export async function gradeSubmissionAction(
 }
 
 // ==========================================
-// LEADERBOARD ACTION
+// LEADERBOARD ACTION (STUDENTS ONLY)
 // ==========================================
 export async function getLeaderboardAction() {
   try {
@@ -246,17 +257,45 @@ export async function getLeaderboardAction() {
 }
 
 // ==========================================
-// QUIZ ACTIONS
+// QUIZ & MANUAL UPLOAD ACTIONS
 // ==========================================
 export async function getQuizzesAction(batchId?: string) {
   try {
     const quizzes = await prisma.quiz.findMany({
       where: batchId ? { batchId } : undefined,
+      include: { batch: true },
       orderBy: { createdAt: 'desc' },
     });
     return { success: true, quizzes };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to fetch quizzes.' };
+  }
+}
+
+export async function createManualQuizAction(data: {
+  batchId: string;
+  title: string;
+  cefrLevel: CEFRLevel;
+  topic: string;
+  questions: any[];
+}) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const quiz = await prisma.quiz.create({
+      data: {
+        batchId: data.batchId,
+        title: data.title,
+        cefrLevel: data.cefrLevel,
+        topic: data.topic,
+        questions: data.questions,
+      },
+    });
+
+    return { success: true, quiz };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to create manual quiz.' };
   }
 }
 
@@ -286,6 +325,257 @@ export async function submitQuizAction(quizId: string, pointsEarned: number, ans
     return { success: true, submission };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to submit quiz.' };
+  }
+}
+
+export async function getTeacherQuizAnalyticsAction(quizId?: string) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const submissions = await prisma.quizSubmission.findMany({
+      where: quizId ? { quizId } : undefined,
+      include: {
+        student: { include: { batch: true } },
+        quiz: true,
+      },
+      orderBy: { completedAt: 'desc' },
+    });
+
+    return { success: true, submissions };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch quiz analytics.' };
+  }
+}
+
+// ==========================================
+// ATTENDANCE ACTIONS
+// ==========================================
+export async function markAttendanceAction(data: {
+  studentId: string;
+  batchId: string;
+  date: string;
+  status: 'PRESENT' | 'ABSENT' | 'LATE';
+  notes?: string;
+}) {
+  try {
+    const dateObj = new Date(data.date);
+    const existing = await prisma.attendanceRecord.findFirst({
+      where: {
+        studentId: data.studentId,
+        batchId: data.batchId,
+        date: dateObj,
+      },
+    });
+
+    let record;
+    if (existing) {
+      record = await prisma.attendanceRecord.update({
+        where: { id: existing.id },
+        data: { status: data.status, notes: data.notes || null },
+      });
+    } else {
+      record = await prisma.attendanceRecord.create({
+        data: {
+          studentId: data.studentId,
+          batchId: data.batchId,
+          date: dateObj,
+          status: data.status,
+          notes: data.notes || null,
+        },
+      });
+    }
+
+    return { success: true, record };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to mark attendance.' };
+  }
+}
+
+export async function getBatchAttendanceAction(batchId: string) {
+  try {
+    const records = await prisma.attendanceRecord.findMany({
+      where: { batchId },
+      include: { student: true },
+      orderBy: { date: 'desc' },
+    });
+    return { success: true, records };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch attendance.' };
+  }
+}
+
+export async function getStudentAttendanceAction() {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const records = await prisma.attendanceRecord.findMany({
+      where: { studentId: user.id },
+      include: { batch: true },
+      orderBy: { date: 'desc' },
+    });
+    return { success: true, records };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch student attendance.' };
+  }
+}
+
+// ==========================================
+// FEE RECORD ACTIONS
+// ==========================================
+export async function updateFeeRecordAction(data: {
+  studentId: string;
+  batchId: string;
+  amount: number;
+  status: 'PAID' | 'PENDING' | 'OVERDUE';
+  dueDate: string;
+  paidDate?: string;
+  remarks?: string;
+}) {
+  try {
+    const existing = await prisma.feeRecord.findFirst({
+      where: {
+        studentId: data.studentId,
+        batchId: data.batchId,
+      },
+    });
+
+    let record;
+    if (existing) {
+      record = await prisma.feeRecord.update({
+        where: { id: existing.id },
+        data: {
+          amount: data.amount,
+          status: data.status,
+          dueDate: new Date(data.dueDate),
+          paidDate: data.paidDate ? new Date(data.paidDate) : null,
+          remarks: data.remarks || null,
+        },
+      });
+    } else {
+      record = await prisma.feeRecord.create({
+        data: {
+          studentId: data.studentId,
+          batchId: data.batchId,
+          amount: data.amount,
+          status: data.status,
+          dueDate: new Date(data.dueDate),
+          paidDate: data.paidDate ? new Date(data.paidDate) : null,
+          remarks: data.remarks || null,
+        },
+      });
+    }
+
+    return { success: true, record };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update fee record.' };
+  }
+}
+
+export async function getBatchFeeRecordsAction(batchId: string) {
+  try {
+    const records = await prisma.feeRecord.findMany({
+      where: { batchId },
+      include: { student: true },
+      orderBy: { dueDate: 'desc' },
+    });
+    return { success: true, records };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch fee records.' };
+  }
+}
+
+export async function getStudentFeeRecordsAction() {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const records = await prisma.feeRecord.findMany({
+      where: { studentId: user.id },
+      include: { batch: true },
+      orderBy: { dueDate: 'desc' },
+    });
+    return { success: true, records };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch student fees.' };
+  }
+}
+
+// ==========================================
+// RECORDED SESSIONS & WATCH ANALYTICS ACTIONS
+// ==========================================
+export async function createRecordedSessionAction(data: {
+  batchId: string;
+  title: string;
+  description?: string;
+  videoUrl: string;
+  durationSeconds?: number;
+}) {
+  try {
+    const session = await prisma.recordedSession.create({
+      data: {
+        batchId: data.batchId,
+        title: data.title,
+        description: data.description || null,
+        videoUrl: data.videoUrl,
+        durationSeconds: data.durationSeconds || 0,
+      },
+    });
+    return { success: true, session };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to create recorded session.' };
+  }
+}
+
+export async function getRecordedSessionsAction(batchId?: string) {
+  try {
+    const sessions = await prisma.recordedSession.findMany({
+      where: batchId ? { batchId } : undefined,
+      include: {
+        batch: true,
+        watchLogs: { include: { student: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, sessions };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch recorded sessions.' };
+  }
+}
+
+export async function logVideoWatchProgressAction(
+  sessionId: string,
+  watchedSeconds: number,
+  isCompleted: boolean
+) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const log = await prisma.sessionWatchLog.upsert({
+      where: {
+        sessionId_studentId: {
+          sessionId,
+          studentId: user.id,
+        },
+      },
+      update: {
+        watchedSeconds,
+        isCompleted,
+        lastWatchedAt: new Date(),
+      },
+      create: {
+        sessionId,
+        studentId: user.id,
+        watchedSeconds,
+        isCompleted,
+      },
+    });
+
+    return { success: true, log };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to log watch progress.' };
   }
 }
 
@@ -338,7 +628,7 @@ export async function submitHomeworkAction(formData: FormData) {
 }
 
 // ==========================================
-// PROFILE ACTION
+// PROFILE ACTIONS & DISPLAY NAME UPDATE
 // ==========================================
 export async function getStudentProfileAction() {
   try {
@@ -353,6 +643,26 @@ export async function getStudentProfileAction() {
     return { success: true, profile };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to fetch student profile.' };
+  }
+}
+
+export async function updateProfileNameAction(fullName: string) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    if (!fullName || fullName.trim().length < 2) {
+      return { success: false, error: 'Name must be at least 2 characters.' };
+    }
+
+    const profile = await prisma.profile.update({
+      where: { id: user.id },
+      data: { fullName: fullName.trim() },
+    });
+
+    return { success: true, profile };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update profile name.' };
   }
 }
 
