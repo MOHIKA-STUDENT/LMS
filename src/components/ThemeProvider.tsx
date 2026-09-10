@@ -22,10 +22,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(savedTheme);
     if (savedTheme === 'light') {
       document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
+      document.documentElement.style.colorScheme = 'light';
     } else {
-      document.documentElement.classList.remove('light');
       document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
     }
   }, []);
 
@@ -35,10 +35,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('lms-theme', newTheme);
     if (newTheme === 'light') {
       document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
+      document.documentElement.style.colorScheme = 'light';
     } else {
-      document.documentElement.classList.remove('light');
       document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
     }
   };
 

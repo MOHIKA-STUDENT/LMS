@@ -1,8 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getBatchesAction, getRosterAction, markAttendanceAction, getBatchAttendanceAction, updateFeeRecordAction, getBatchFeeRecordsAction } from '@/app/actions/lms-actions';
-import { Calendar, CreditCard, CheckCircle, XCircle, Clock, AlertCircle, Save } from 'lucide-react';
+import {
+  getBatchesAction,
+  getRosterAction,
+  markAttendanceAction,
+  getBatchAttendanceAction,
+  updateFeeRecordAction,
+  getBatchFeeRecordsAction,
+} from '@/app/actions/lms-actions';
+import {
+  Calendar,
+  CreditCard,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Save,
+  Eye,
+  X,
+  TrendingUp,
+  UserCheck,
+  FileText,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AttendanceFeesPage() {
@@ -25,6 +45,9 @@ export default function AttendanceFeesPage() {
       remarks: string;
     };
   }>({});
+
+  // Student Report Modal State
+  const [selectedStudentForReport, setSelectedStudentForReport] = useState<any | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -120,8 +143,35 @@ export default function AttendanceFeesPage() {
     }
   };
 
+  // Helper calculation for student history report modal
+  const getStudentHistoryStats = (studentId: string) => {
+    const atts = attendanceRecords.filter((r) => r.studentId === studentId);
+    const totalDays = atts.length;
+    const presentCount = atts.filter((r) => r.status === 'PRESENT').length;
+    const lateCount = atts.filter((r) => r.status === 'LATE').length;
+    const absentCount = atts.filter((r) => r.status === 'ABSENT').length;
+    const presentPct = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : 0;
+    const currentFeeState = feeFormState[studentId] || {
+      amount: 0,
+      status: 'PENDING',
+      dueDate: 'N/A',
+      remarks: '',
+    };
+
+    return {
+      atts,
+      totalDays,
+      presentCount,
+      lateCount,
+      absentCount,
+      presentPct,
+      currentFeeState,
+    };
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-theme-main flex items-center space-x-2">
@@ -213,7 +263,7 @@ export default function AttendanceFeesPage() {
                       <p className="text-xs text-theme-sub">{student.email}</p>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap gap-y-2">
                       <button
                         onClick={() => handleMarkAttendance(student.id, 'PRESENT')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all ${
@@ -248,6 +298,15 @@ export default function AttendanceFeesPage() {
                       >
                         <XCircle className="w-3.5 h-3.5 text-rose-500" />
                         <span>Absent</span>
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedStudentForReport(student)}
+                        className="px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all ml-2"
+                        title="View complete date-by-date attendance & fee history report"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View History Report</span>
                       </button>
                     </div>
                   </div>
@@ -288,17 +347,27 @@ export default function AttendanceFeesPage() {
                         <p className="text-xs text-theme-sub">{student.email}</p>
                       </div>
 
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold w-fit ${
-                          state.status === 'PAID'
-                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
-                            : state.status === 'OVERDUE'
-                            ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/40'
-                            : 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
-                        }`}
-                      >
-                        {state.status}
-                      </span>
+                      <div className="flex items-center space-x-3">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold w-fit ${
+                            state.status === 'PAID'
+                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
+                              : state.status === 'OVERDUE'
+                              ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/40'
+                              : 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
+                          }`}
+                        >
+                          {state.status}
+                        </span>
+
+                        <button
+                          onClick={() => setSelectedStudentForReport(student)}
+                          className="px-3 py-1 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View History Report</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
@@ -367,6 +436,165 @@ export default function AttendanceFeesPage() {
           )}
         </div>
       )}
+
+      {/* STUDENT HISTORY REPORT MODAL */}
+      {selectedStudentForReport && (() => {
+        const stats = getStudentHistoryStats(selectedStudentForReport.id);
+        const batchName = batches.find((b) => b.id === selectedBatchId)?.name || 'Unknown Batch';
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+            <div className="bg-theme-card border border-theme rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+              {/* Modal Header */}
+              <div className="p-6 border-b border-theme flex items-center justify-between bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-lg">
+                    {selectedStudentForReport.fullName?.charAt(0) || 'S'}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-theme-main">{selectedStudentForReport.fullName}</h2>
+                    <p className="text-xs text-theme-sub">{selectedStudentForReport.email} • {batchName}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedStudentForReport(null)}
+                  className="p-2 rounded-xl text-theme-sub hover:text-theme-main hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto space-y-6">
+                {/* Summary Stat Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-theme-card-sub border border-theme rounded-xl p-3.5 text-center">
+                    <p className="text-[10px] uppercase font-bold text-theme-sub">Total Recorded</p>
+                    <p className="text-xl font-black text-theme-main mt-1">{stats.totalDays} Days</p>
+                  </div>
+
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 text-center">
+                    <p className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400">Present</p>
+                    <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                      {stats.presentCount} ({stats.presentPct}%)
+                    </p>
+                  </div>
+
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 text-center">
+                    <p className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">Late</p>
+                    <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-1">{stats.lateCount}</p>
+                  </div>
+
+                  <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3.5 text-center">
+                    <p className="text-[10px] uppercase font-bold text-rose-600 dark:text-rose-400">Absent</p>
+                    <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1">{stats.absentCount}</p>
+                  </div>
+                </div>
+
+                {/* Attendance Rate Progress Bar */}
+                <div className="bg-theme-card-sub border border-theme rounded-xl p-4 space-y-2">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-theme-main flex items-center space-x-1.5">
+                      <TrendingUp className="w-4 h-4 text-indigo-500" />
+                      <span>Overall Attendance Score</span>
+                    </span>
+                    <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{stats.presentPct}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex">
+                    <div
+                      style={{ width: `${stats.presentPct}%` }}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Current Fee Record Summary */}
+                <div className="bg-theme-card-sub border border-theme rounded-2xl p-4 space-y-3">
+                  <h3 className="text-xs font-bold text-theme-main uppercase tracking-wider flex items-center space-x-1.5">
+                    <CreditCard className="w-4 h-4 text-indigo-500" />
+                    <span>Tuition Fee Status</span>
+                  </h3>
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div>
+                      <span className="text-theme-sub">Tuition Amount: </span>
+                      <span className="font-bold text-theme-main font-mono">${stats.currentFeeState.amount}</span>
+                    </div>
+                    <div>
+                      <span className="text-theme-sub">Due Date: </span>
+                      <span className="font-mono text-theme-main">{stats.currentFeeState.dueDate}</span>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold font-mono ${
+                        stats.currentFeeState.status === 'PAID'
+                          ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
+                          : stats.currentFeeState.status === 'OVERDUE'
+                          ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/40'
+                          : 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
+                      }`}
+                    >
+                      {stats.currentFeeState.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Date-by-Date Attendance Log */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-theme-main uppercase tracking-wider flex items-center space-x-1.5">
+                    <FileText className="w-4 h-4 text-indigo-500" />
+                    <span>Date-by-Date Attendance Records</span>
+                  </h3>
+
+                  {stats.atts.length === 0 ? (
+                    <p className="text-xs text-theme-sub italic py-4 text-center">No attendance logged for this student yet.</p>
+                  ) : (
+                    <div className="divide-y divide-theme border border-theme rounded-2xl overflow-hidden">
+                      {stats.atts.map((record) => {
+                        const dateFormatted = new Date(record.date).toLocaleDateString(undefined, {
+                          weekday: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        });
+
+                        return (
+                          <div key={record.id} className="p-3.5 flex items-center justify-between bg-theme-card hover:bg-theme-card-sub transition-colors">
+                            <span className="text-xs font-mono font-medium text-theme-main">{dateFormatted}</span>
+                            <span
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center space-x-1 ${
+                                record.status === 'PRESENT'
+                                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
+                                  : record.status === 'LATE'
+                                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
+                                  : 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/40'
+                              }`}
+                            >
+                              {record.status === 'PRESENT' && <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />}
+                              {record.status === 'LATE' && <Clock className="w-3.5 h-3.5 text-amber-500" />}
+                              {record.status === 'ABSENT' && <XCircle className="w-3.5 h-3.5 text-rose-500" />}
+                              <span>{record.status}</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-theme bg-theme-card-sub flex justify-end">
+                <button
+                  onClick={() => setSelectedStudentForReport(null)}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md transition-all"
+                >
+                  Close Report
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

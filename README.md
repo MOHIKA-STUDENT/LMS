@@ -12,7 +12,9 @@
 - **Batch Editing & Deletion**: Update batch info, schedule timings, or delete batches in 1 click.
 - **Masterclass Zoom Broadcast**: Broadcast 1 Zoom meeting link to ALL your batches simultaneously for joint sessions or webinars.
 - **Roster & Access Control**: Manage student accounts, assign batches, edit details, or suspend access for students who left the class.
-- **Attendance & Fee Ledger**: Record daily attendance (`PRESENT`, `ABSENT`, `LATE`) and track tuition fees (`PAID`, `PENDING`, `OVERDUE`).
+- **Attendance & Fee Ledger with Student History Report Modal**:
+  - Record daily attendance (`PRESENT`, `ABSENT`, `LATE`) and track tuition fees (`PAID`, `PENDING`, `OVERDUE`).
+  - Click **"View History Report"** on any student to open a comprehensive report modal showing total recorded days, present/absent/late counts & percentages, overall attendance score bar, fee status, and complete date-by-date attendance log.
 - **Recorded Sessions & Watch Analytics**: Stream recorded classes with live watch progress logging (watched duration, completion %, and student view logs).
 - **Course Materials Vault**: Upload study guides (.pdf, .docx, .ppt) to Cloudinary with target scope (**Specific Batch** OR **All Batches (Global)**).
 - **AI & Manual Quiz Studio**:
@@ -29,7 +31,10 @@
 - **Daily Quiz Arena**: Take CEFR multiple-choice quizzes with **step-by-step explanations revealed ONLY AFTER test submission**.
 - **Gamified Leaderboard**: Rank among active enrolled students for points.
 - **Account Customization & PFP Avatar**: Update display name and upload custom PFP avatar images to Cloudinary CDN.
-- **Light & Dark Theme Switcher**: Toggle between Dark and Light themes across all pages.
+- **Native Responsive Mobile UI**:
+  - Sleek mobile top bar with 1-tap Theme Switcher, Native App Installation prompt, Role Switcher, and Avatar.
+  - Horizontally scrollable Mobile Bottom Navigation Bar for 1-tap switching across all sections.
+  - Theme Switcher support with instant dark/light mode toggling on smartphones.
 
 ---
 
