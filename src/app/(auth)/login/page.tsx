@@ -42,11 +42,10 @@ export default function LoginPage() {
       const role = profile?.role || data.user.user_metadata?.role || 'STUDENT';
 
       if (role === 'TEACHER') {
-        router.push('/admin/batches');
+        window.location.href = '/admin/batches';
       } else {
-        router.push('/student/timeline');
+        window.location.href = '/student/timeline';
       }
-      router.refresh();
     } catch (err: any) {
       toast.error(err.message || 'An unexpected error occurred.');
       setLoading(false);
