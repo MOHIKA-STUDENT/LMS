@@ -98,16 +98,19 @@ ALTER TABLE homework_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quizzes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quiz_submissions ENABLE ROW LEVEL SECURITY;
 
--- Helper Function: Check if current user is a Teacher
+-- Helper Function: Check if current user is a Teacher (Isolated SECURITY DEFINER)
 CREATE OR REPLACE FUNCTION public.is_teacher()
 RETURNS BOOLEAN AS $$
+DECLARE
+  v_role TEXT;
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'TEACHER'
-  );
+  SELECT role INTO v_role
+  FROM public.profiles
+  WHERE id = auth.uid();
+
+  RETURN (v_role = 'TEACHER');
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Helper Function: Get current student batch_id
 CREATE OR REPLACE FUNCTION public.get_user_batch_id()
@@ -118,9 +121,18 @@ BEGIN
   SELECT batch_id INTO v_batch_id
   FROM public.profiles
   WHERE id = auth.uid();
+
   RETURN v_batch_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Drop existing policies to prevent duplication errors
+DROP POLICY IF EXISTS "Teachers can manage all batches" ON batches;
+DROP POLICY IF EXISTS "Authenticated users can view batch info" ON batches;
+DROP POLICY IF EXISTS "Teachers can view and manage all profiles" ON profiles;
+DROP POLICY IF EXISTS "Users can view profile names and points (for Leaderboard)" ON profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile on signup" ON profiles;
 
 -- ------------------------------------------
 -- 1. BATCHES POLICIES
@@ -140,7 +152,7 @@ CREATE POLICY "Teachers can view and manage all profiles"
   ON profiles FOR ALL
   USING (is_teacher());
 
-CREATE POLICY "Users can view profile names and points (for Leaderboard)"
+CREATE POLICY "Authenticated users can view profiles"
   ON profiles FOR SELECT
   USING (auth.uid() IS NOT NULL);
 
@@ -155,28 +167,38 @@ CREATE POLICY "Users can insert their own profile on signup"
 -- ------------------------------------------
 -- 3. COURSE MATERIALS POLICIES
 -- ------------------------------------------
+DROP POLICY IF EXISTS "Teachers can manage course materials" ON course_materials;
+DROP POLICY IF EXISTS "Students can view materials for their batch" ON course_materials;
+
 CREATE POLICY "Teachers can manage course materials"
   ON course_materials FOR ALL
   USING (is_teacher());
 
 CREATE POLICY "Students can view materials for their batch"
   ON course_materials FOR SELECT
-  USING (batch_id = get_user_batch_id());
+  USING (batch_id = get_user_batch_id() OR is_teacher());
 
 -- ------------------------------------------
 -- 4. ASSIGNMENTS POLICIES
 -- ------------------------------------------
+DROP POLICY IF EXISTS "Teachers can manage assignments" ON assignments;
+DROP POLICY IF EXISTS "Students can view assignments for their batch" ON assignments;
+
 CREATE POLICY "Teachers can manage assignments"
   ON assignments FOR ALL
   USING (is_teacher());
 
 CREATE POLICY "Students can view assignments for their batch"
   ON assignments FOR SELECT
-  USING (batch_id = get_user_batch_id());
+  USING (batch_id = get_user_batch_id() OR is_teacher());
 
 -- ------------------------------------------
 -- 5. HOMEWORK SUBMISSIONS POLICIES
 -- ------------------------------------------
+DROP POLICY IF EXISTS "Teachers can view and update all submissions" ON homework_submissions;
+DROP POLICY IF EXISTS "Students can view their own submissions" ON homework_submissions;
+DROP POLICY IF EXISTS "Students can insert their own submissions" ON homework_submissions;
+
 CREATE POLICY "Teachers can view and update all submissions"
   ON homework_submissions FOR ALL
   USING (is_teacher());
@@ -192,17 +214,24 @@ CREATE POLICY "Students can insert their own submissions"
 -- ------------------------------------------
 -- 6. QUIZZES POLICIES
 -- ------------------------------------------
+DROP POLICY IF EXISTS "Teachers can manage quizzes" ON quizzes;
+DROP POLICY IF EXISTS "Students can view quizzes for their batch" ON quizzes;
+
 CREATE POLICY "Teachers can manage quizzes"
   ON quizzes FOR ALL
   USING (is_teacher());
 
 CREATE POLICY "Students can view quizzes for their batch"
   ON quizzes FOR SELECT
-  USING (batch_id = get_user_batch_id());
+  USING (batch_id = get_user_batch_id() OR is_teacher());
 
 -- ------------------------------------------
 -- 7. QUIZ SUBMISSIONS POLICIES
 -- ------------------------------------------
+DROP POLICY IF EXISTS "Teachers can view all quiz submissions" ON quiz_submissions;
+DROP POLICY IF EXISTS "Students can view their own quiz submissions" ON quiz_submissions;
+DROP POLICY IF EXISTS "Students can submit quiz results" ON quiz_submissions;
+
 CREATE POLICY "Teachers can view all quiz submissions"
   ON quiz_submissions FOR SELECT
   USING (is_teacher());
@@ -226,10 +255,13 @@ BEGIN
     new.email,
     COALESCE(new.raw_user_meta_data->>'role', 'STUDENT'),
     NULLIF(new.raw_user_meta_data->>'batch_id', '')::UUID
-  );
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    full_name = EXCLUDED.full_name,
+    email = EXCLUDED.email;
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Drop trigger if exists and recreate
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

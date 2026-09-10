@@ -77,19 +77,25 @@ export default function Navbar({ profile }: NavbarProps) {
         {/* User Info & Actions */}
         <div className="flex items-center space-x-3">
           {profile ? (
-            <div className="flex items-center space-x-3">
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-sm font-semibold text-slate-200">
+            <div className="flex items-center space-x-2 bg-slate-800/60 border border-slate-700/60 px-3 py-1.5 rounded-xl">
+              <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-xs font-mono">
+                {(profile.full_name || profile.email).charAt(0).toUpperCase()}
+              </div>
+              <div className="hidden sm:flex flex-col items-start text-xs">
+                <span className="font-semibold text-slate-100 max-w-[120px] truncate">
                   {profile.full_name || profile.email}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-indigo-400 font-mono font-medium border border-indigo-500/20">
+                <span className="text-[10px] text-indigo-400 font-mono font-medium">
                   {profile.role} {profile.role === 'STUDENT' && `• ${profile.points} pts`}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-xs text-slate-400">Authenticated User</span>
+            <div className="flex items-center space-x-2 bg-slate-800/60 border border-slate-700/60 px-3 py-1.5 rounded-xl text-xs text-slate-300">
+              <div className="w-7 h-7 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-300 font-bold text-xs">
+                U
+              </div>
+              <span className="hidden sm:inline">Signed In</span>
             </div>
           )}
 
