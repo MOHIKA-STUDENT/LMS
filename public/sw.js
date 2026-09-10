@@ -1,10 +1,10 @@
-const CACHE_NAME = 'english-lms-v2';
+const CACHE_NAME = 'english-lms-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/apple-touch-icon.png'
+  '/icon-192.png?v=vedayan',
+  '/icon-512.png?v=vedayan',
+  '/apple-touch-icon.png?v=vedayan'
 ];
 
 self.addEventListener('install', (event) => {
