@@ -22,12 +22,17 @@ export async function uploadToCloudinary(
   folder: string
 ): Promise<CloudinaryUploadResult> {
   try {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const publicId = `${Date.now()}_${nameWithoutExt}`;
+
     return new Promise((resolve) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `english-lms/${folder}`,
           resource_type: 'auto',
-          public_id: `${Date.now()}_${fileName.replace(/\.[^/.]+$/, '')}`,
+          public_id: publicId,
+          flags: 'attachment:false',
         },
         (error, result) => {
           if (error || !result) {
@@ -36,11 +41,15 @@ export async function uploadToCloudinary(
               error: error?.message || 'Failed to upload to Cloudinary CDN.',
             });
           } else {
+            let finalUrl = result.secure_url;
+            if (ext && !finalUrl.toLowerCase().endsWith(`.${ext}`)) {
+              finalUrl = `${finalUrl}.${ext}`;
+            }
             resolve({
               success: true,
-              url: result.secure_url,
+              url: finalUrl,
               bytes: result.bytes,
-              format: result.format,
+              format: result.format || ext,
             });
           }
         }

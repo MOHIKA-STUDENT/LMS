@@ -203,7 +203,15 @@ export default function MaterialsPage() {
         ) : (
           <div className="divide-y divide-theme">
             {materials.map((m) => {
-              const batchName = batches.find((b) => b.id === m.batchId)?.name || 'Unknown Batch';
+              const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'Unknown Batch');
+              const fileType = (m.fileType || 'file').toLowerCase();
+              let formattedUrl = m.fileUrl || '#';
+              if (fileType && !formattedUrl.toLowerCase().endsWith(`.${fileType}`)) {
+                formattedUrl = `${formattedUrl}.${fileType}`;
+              }
+              const isPdf = fileType === 'pdf' || formattedUrl.toLowerCase().endsWith('.pdf');
+              const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(formattedUrl)}`;
+
               return (
                 <div key={m.id} className="py-4 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
                   <div className="flex items-center space-x-3">
@@ -213,21 +221,33 @@ export default function MaterialsPage() {
                     <div>
                       <h4 className="font-semibold text-theme-main text-sm">{m.title}</h4>
                       <p className="text-xs text-theme-sub mt-0.5">
-                        Batch: <span className="text-indigo-600 dark:text-indigo-300 font-medium">{batchName}</span> • {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • {(m.fileType || 'file').toUpperCase()}
+                        Batch: <span className="text-indigo-600 dark:text-indigo-300 font-medium">{batchName}</span> • {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • {fileType.toUpperCase()}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-2">
                     <a
-                      href={m.fileUrl}
+                      href={formattedUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="p-2 text-indigo-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                      title="Download File"
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow transition-colors"
+                      title="Open / View File"
                     >
-                      <Download className="w-5 h-5" />
+                      <Download className="w-4 h-4" />
+                      <span>Open File</span>
                     </a>
+                    {isPdf && (
+                      <a
+                        href={gDocsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-theme-main hover:bg-slate-300 dark:hover:bg-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-colors"
+                        title="Preview with Google Viewer"
+                      >
+                        <span>Preview PDF</span>
+                      </a>
+                    )}
                     <button
                       onClick={() => handleDelete(m.id)}
                       className="p-2 text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
