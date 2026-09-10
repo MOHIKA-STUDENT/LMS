@@ -92,7 +92,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-theme-main text-theme-main flex flex-col transition-colors duration-200">
       <OfflineBanner />
       <Navbar profile={profile as any} />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+      <main className="flex-1 container mx-auto px-4 pt-6 pb-28 md:pb-8 max-w-7xl">
         {children}
       </main>
     </div>

@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton, useUser } from '@clerk/nextjs';
 import { Profile } from '@/types/database';
 import { formatStudentDisplayName } from '@/lib/utils/format-name';
 import { useTheme } from '@/components/ThemeProvider';
-import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LayoutDashboard, CheckSquare, Settings, Video, CreditCard, UserCheck, Sun, Moon, Menu, X } from 'lucide-react';
+import { BookOpen, Users, Calendar, FileText, Sparkles, Award, LayoutDashboard, CheckSquare, Settings, Video, CreditCard, UserCheck, Sun, Moon, Menu, X, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface NavbarProps {
   profile?: Profile | null;
@@ -18,6 +19,32 @@ export default function Navbar({ profile }: NavbarProps) {
   const { user, isLoaded } = useUser();
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        toast.success('LMS App installed successfully!');
+      }
+      setDeferredPrompt(null);
+    } else {
+      toast.info(
+        "To Install App:\n- Android Chrome: Tap 3 dots menu -> 'Install App'\n- iPhone Safari: Tap Share button -> 'Add to Home Screen'",
+        { duration: 6000 }
+      );
+    }
+  };
 
   const role = (user?.publicMetadata as any)?.role || (user?.unsafeMetadata as any)?.role || profile?.role || 'STUDENT';
   const isTeacher = role === 'TEACHER';
@@ -83,6 +110,16 @@ export default function Navbar({ profile }: NavbarProps) {
 
           {/* User Info & Actions */}
           <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* Install App Button */}
+            <button
+              onClick={handleInstallPWA}
+              className="p-2 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold border border-indigo-500/30"
+              title="Install Mobile App"
+            >
+              <Download className="w-4 h-4 text-indigo-500" />
+              <span className="hidden sm:inline">Install App</span>
+            </button>
+
             {/* Theme Switcher Button */}
             <button
               onClick={toggleTheme}
@@ -149,8 +186,17 @@ export default function Navbar({ profile }: NavbarProps) {
 
         {/* Mobile Dropdown Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-theme-card border-b border-theme px-4 py-4 space-y-2 animate-in slide-in-from-top-2 duration-200 shadow-xl">
-            <div className="text-xs font-bold text-theme-sub uppercase tracking-wider mb-2 px-2">Navigation Menu</div>
+          <div className="md:hidden bg-theme-card border-b border-theme px-4 py-4 space-y-3 animate-in slide-in-from-top-2 duration-200 shadow-xl">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-theme-sub uppercase tracking-wider">Navigation Menu</span>
+              <button
+                onClick={handleInstallPWA}
+                className="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Install Mobile App</span>
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {navLinks.map((link) => {
                 const Icon = link.icon;
