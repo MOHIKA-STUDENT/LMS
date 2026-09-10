@@ -273,28 +273,28 @@ export default function MaterialsPage() {
               const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'Unknown Batch');
               const fileType = (m.fileType || 'file').toLowerCase();
               const fileUrl = formatCloudinaryFileUrl(m.fileUrl);
-              const isPdf = fileType === 'pdf' || fileUrl.toLowerCase().endsWith('.pdf');
+              const isPdf = fileType === 'pdf' || fileUrl.toLowerCase().includes('.pdf');
               const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType);
               const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
 
               return (
-                <div key={m.id} className="py-4 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
+                <div key={m.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-indigo-600/20 text-indigo-500 rounded-xl border border-indigo-500/20">
+                    <div className="p-3 bg-indigo-600/20 text-indigo-500 rounded-xl border border-indigo-500/20 shrink-0">
                       <FileText className="w-6 h-6" />
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-theme-main text-sm">{m.title}</h4>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-theme-main text-sm truncate">{m.title}</h4>
                       <p className="text-xs text-theme-sub mt-0.5">
                         Batch: <span className="text-indigo-600 dark:text-indigo-300 font-medium">{batchName}</span> • {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • {fileType.toUpperCase()}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center flex-wrap gap-2 pt-2 sm:pt-0">
                     <button
                       onClick={() => setPreviewMaterial({ ...m, resolvedUrl: fileUrl, gDocsUrl, isPdf, isImage })}
-                      className="px-3 py-1.5 bg-indigo-600/20 text-indigo-600 dark:text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                      className="px-3 py-1.5 bg-indigo-600/20 text-indigo-600 dark:text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all whitespace-nowrap"
                       title="In-App Document Preview"
                     >
                       <Eye className="w-4 h-4" />
@@ -302,7 +302,7 @@ export default function MaterialsPage() {
                     </button>
                     <button
                       onClick={() => handleEditOpen(m)}
-                      className="px-3 py-1.5 bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                      className="px-3 py-1.5 bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all whitespace-nowrap"
                       title="Edit Material Details"
                     >
                       <Edit3 className="w-4 h-4" />
@@ -312,7 +312,7 @@ export default function MaterialsPage() {
                       href={fileUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow transition-colors"
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow transition-colors whitespace-nowrap"
                       title="Open / View File"
                     >
                       <Download className="w-4 h-4" />
@@ -320,7 +320,7 @@ export default function MaterialsPage() {
                     </a>
                     <button
                       onClick={() => handleDelete(m.id)}
-                      className="p-2 text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                      className="p-2 text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0"
                       title="Delete Material"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -436,44 +436,44 @@ export default function MaterialsPage() {
 
       {/* In-App Document Preview Modal */}
       {previewMaterial && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col justify-between space-y-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-theme-card border border-theme rounded-2xl p-4 sm:p-6 shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between border-b border-theme pb-3">
-              <div>
-                <h3 className="font-bold text-theme-main text-lg">{previewMaterial.title}</h3>
-                <p className="text-xs text-theme-sub">{previewMaterial.description || 'Document Preview'}</p>
+              <div className="min-w-0 flex-1 pr-2">
+                <h3 className="font-bold text-theme-main text-base sm:text-lg truncate">{previewMaterial.title}</h3>
+                <p className="text-xs text-theme-sub truncate">{previewMaterial.description || 'Document Preview'}</p>
               </div>
               <button
                 onClick={() => setPreviewMaterial(null)}
-                className="p-2 text-theme-sub hover:text-theme-main bg-theme-card-sub rounded-xl border border-theme"
+                className="p-2 text-theme-sub hover:text-theme-main bg-theme-card-sub rounded-xl border border-theme shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 bg-black/50 rounded-xl overflow-hidden min-h-[500px] border border-theme flex items-center justify-center relative">
-              {previewMaterial.isImage ? (
+            <div className="flex-1 bg-black/50 rounded-xl overflow-hidden min-h-[250px] sm:min-h-[500px] border border-theme flex items-center justify-center relative">
+              {previewMaterial.isImage || previewMaterial.isPdf || previewMaterial.resolvedUrl.includes('/f_jpg/') ? (
                 <img
                   src={previewMaterial.resolvedUrl}
                   alt={previewMaterial.title}
-                  className="max-h-[600px] w-full object-contain mx-auto"
+                  className="max-h-[60vh] sm:max-h-[600px] w-full object-contain mx-auto rounded-lg"
                 />
               ) : (
                 <iframe
                   src={previewMaterial.gDocsUrl}
-                  className="w-full h-[600px] border-0"
+                  className="w-full h-[350px] sm:h-[600px] border-0"
                   title={previewMaterial.title}
                 />
               )}
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-theme-sub">Format: {previewMaterial.fileType.toUpperCase()}</span>
+              <span className="text-xs text-theme-sub">Format: {previewMaterial.fileType?.toUpperCase()}</span>
               <a
                 href={previewMaterial.resolvedUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center space-x-2 shadow transition-all"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center space-x-2 shadow transition-all whitespace-nowrap"
               >
                 <Download className="w-4 h-4" />
                 <span>Open Direct Tab</span>
