@@ -45,6 +45,16 @@ export default function StudentLeaderboardPage() {
           <p className="text-sm text-theme-sub mt-1">Compete with fellow English academy students by completing quizzes and homework</p>
         </div>
 
+        {/* Unassigned Student Notice Banner */}
+        {profiles.length === 1 && !profiles[0]?.institutionId && !profiles[0]?.batchId && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center space-x-3 text-amber-600 dark:text-amber-400 text-xs">
+            <span className="text-base">🏢</span>
+            <span>
+              <strong>Unassigned Workspace:</strong> You are currently viewing your personal score. Join your college workspace or batch using your teacher's code to unlock full academy rankings!
+            </span>
+          </div>
+        )}
+
         {/* Filter Toggle */}
         <div className="flex items-center bg-theme-card border border-theme p-1 rounded-xl self-start shadow-sm">
           <button

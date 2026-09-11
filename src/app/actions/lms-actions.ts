@@ -852,12 +852,27 @@ export async function getLeaderboardAction() {
     }
 
     // STRICT MULTI-TENANT ISOLATION:
-    // Leaderboard returns ONLY approved students from the SAME institution workspace
-    const whereClause: any = {
-      role: 'STUDENT',
-      status: 'APPROVED',
-      institutionId: profile.institutionId,
-    };
+    // Leaderboard returns ONLY approved students from the SAME institution workspace or SAME batch.
+    // If a student has not joined an institution workspace or batch, return ONLY their own profile.
+    let whereClause: any = {};
+
+    if (profile.institutionId) {
+      whereClause = {
+        role: 'STUDENT',
+        status: 'APPROVED',
+        institutionId: profile.institutionId,
+      };
+    } else if (profile.batchId) {
+      whereClause = {
+        role: 'STUDENT',
+        status: 'APPROVED',
+        batchId: profile.batchId,
+      };
+    } else {
+      whereClause = {
+        id: user.id,
+      };
+    }
 
     const profiles = await prisma.profile.findMany({
       where: whereClause,
