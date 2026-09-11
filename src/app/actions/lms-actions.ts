@@ -329,13 +329,16 @@ export async function getBatchesAction() {
     if (user) {
       const profile = await prisma.profile.findUnique({ where: { id: user.id } });
       if (profile?.role === 'TEACHER') {
-        whereClause = {
-          OR: [
-            { institutionId: profile.institutionId },
-            { teacherId: user.id },
-            { teacherId: null },
-          ],
-        };
+        if (profile.institutionId) {
+          whereClause = {
+            OR: [
+              { institutionId: profile.institutionId },
+              { teacherId: user.id },
+            ],
+          };
+        } else {
+          whereClause = { teacherId: user.id };
+        }
       }
     }
 
@@ -522,13 +525,20 @@ export async function getRosterAction() {
     let whereClause: any = { role: 'STUDENT' };
 
     if (profile?.role === 'TEACHER') {
-      whereClause = {
-        role: 'STUDENT',
-        OR: [
-          { institutionId: profile.institutionId },
-          { batch: { teacherId: user.id } },
-        ],
-      };
+      if (profile.institutionId) {
+        whereClause = {
+          role: 'STUDENT',
+          OR: [
+            { institutionId: profile.institutionId },
+            { batch: { teacherId: user.id } },
+          ],
+        };
+      } else {
+        whereClause = {
+          role: 'STUDENT',
+          batch: { teacherId: user.id },
+        };
+      }
     }
 
     const profiles = await prisma.profile.findMany({
@@ -596,13 +606,22 @@ export async function getMaterialsAction(batchId?: string) {
     let whereClause: any = {};
 
     if (profile?.role === 'TEACHER') {
-      whereClause = {
-        OR: [
-          { teacherId: user.id },
-          { batch: { teacherId: user.id } },
-          { teacherId: null, batchId: null },
-        ],
-      };
+      if (profile.institutionId) {
+        whereClause = {
+          OR: [
+            { institutionId: profile.institutionId },
+            { teacherId: user.id },
+            { batch: { teacherId: user.id } },
+          ],
+        };
+      } else {
+        whereClause = {
+          OR: [
+            { teacherId: user.id },
+            { batch: { teacherId: user.id } },
+          ],
+        };
+      }
     } else {
       let targetTeacherId: string | null = null;
       let targetBatchId: string | null = batchId || profile?.batchId || null;
@@ -753,7 +772,29 @@ export async function updateMaterialAction(formData: FormData) {
 // ==========================================
 export async function getSubmissionsAction() {
   try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    let whereClause: any = {};
+
+    if (profile?.role === 'TEACHER') {
+      if (profile.institutionId) {
+        whereClause = {
+          OR: [
+            { assignment: { batch: { institutionId: profile.institutionId } } },
+            { assignment: { batch: { teacherId: user.id } } },
+          ],
+        };
+      } else {
+        whereClause = { assignment: { batch: { teacherId: user.id } } };
+      }
+    } else {
+      whereClause = { studentId: user.id };
+    }
+
     const submissions = await prisma.homeworkSubmission.findMany({
+      where: whereClause,
       include: { student: true, assignment: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -845,13 +886,22 @@ export async function getQuizzesAction(batchId?: string) {
     let whereClause: any = {};
 
     if (profile?.role === 'TEACHER') {
-      whereClause = {
-        OR: [
-          { teacherId: user.id },
-          { batch: { teacherId: user.id } },
-          { teacherId: null, batchId: null },
-        ],
-      };
+      if (profile.institutionId) {
+        whereClause = {
+          OR: [
+            { institutionId: profile.institutionId },
+            { teacherId: user.id },
+            { batch: { teacherId: user.id } },
+          ],
+        };
+      } else {
+        whereClause = {
+          OR: [
+            { teacherId: user.id },
+            { batch: { teacherId: user.id } },
+          ],
+        };
+      }
     } else {
       let targetTeacherId: string | null = null;
       let targetBatchId: string | null = batchId || profile?.batchId || null;
@@ -1025,8 +1075,27 @@ export async function getTeacherQuizAnalyticsAction(quizId?: string) {
     const user = await currentUser();
     if (!user) return { success: false, error: 'Unauthorized.' };
 
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    let quizWhere: any = {};
+
+    if (profile?.role === 'TEACHER') {
+      if (profile.institutionId) {
+        quizWhere = {
+          OR: [
+            { teacherId: user.id },
+            { institutionId: profile.institutionId },
+          ],
+        };
+      } else {
+        quizWhere = { teacherId: user.id };
+      }
+    }
+
     const submissions = await prisma.quizSubmission.findMany({
-      where: quizId ? { quizId } : undefined,
+      where: {
+        ...(quizId ? { quizId } : {}),
+        quiz: quizWhere,
+      },
       include: {
         student: { include: { batch: true } },
         quiz: true,
@@ -1277,13 +1346,22 @@ export async function getRecordedSessionsAction(batchId?: string) {
     let whereClause: any = {};
 
     if (profile?.role === 'TEACHER') {
-      whereClause = {
-        OR: [
-          { teacherId: user.id },
-          { batch: { teacherId: user.id } },
-          { teacherId: null, batchId: null },
-        ],
-      };
+      if (profile.institutionId) {
+        whereClause = {
+          OR: [
+            { institutionId: profile.institutionId },
+            { teacherId: user.id },
+            { batch: { teacherId: user.id } },
+          ],
+        };
+      } else {
+        whereClause = {
+          OR: [
+            { teacherId: user.id },
+            { batch: { teacherId: user.id } },
+          ],
+        };
+      }
     } else {
       let targetTeacherId: string | null = null;
       let targetBatchId: string | null = batchId || profile?.batchId || null;
@@ -1375,9 +1453,15 @@ export async function getAssignmentsAction(batchId?: string) {
     let whereClause: any = {};
 
     if (profile?.role === 'TEACHER') {
-      whereClause = batchId && batchId !== 'ALL'
-        ? { batchId, batch: { teacherId: user.id } }
-        : { batch: { teacherId: user.id } };
+      if (profile.institutionId) {
+        whereClause = batchId && batchId !== 'ALL'
+          ? { batchId, batch: { OR: [{ institutionId: profile.institutionId }, { teacherId: user.id }] } }
+          : { batch: { OR: [{ institutionId: profile.institutionId }, { teacherId: user.id }] } };
+      } else {
+        whereClause = batchId && batchId !== 'ALL'
+          ? { batchId, batch: { teacherId: user.id } }
+          : { batch: { teacherId: user.id } };
+      }
     } else {
       const targetBatchId = batchId || profile?.batchId;
       if (!targetBatchId) {
