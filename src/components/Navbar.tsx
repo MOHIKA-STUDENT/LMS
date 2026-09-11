@@ -11,6 +11,7 @@ import {
   createInstitutionAction,
   joinInstitutionByCodeAction,
   getInstitutionDetailsAction,
+  verifyTeacherPasswordAction,
 } from '@/app/actions/lms-actions';
 import {
   BookOpen,
@@ -41,6 +42,7 @@ import {
   EyeOff,
   Copy,
   Check,
+  ShieldAlert,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -64,6 +66,12 @@ export default function Navbar({ profile }: NavbarProps) {
   const [workspaceCodeInput, setWorkspaceCodeInput] = useState('');
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [isSubmittingWorkspace, setIsSubmittingWorkspace] = useState(false);
+
+  // Password Authentication Gate for Join Code
+  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
+  const [showPasswordAuthModal, setShowPasswordAuthModal] = useState(false);
+  const [teacherAuthPassword, setTeacherAuthPassword] = useState('');
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstall = (e: Event) => {
@@ -100,11 +108,49 @@ export default function Navbar({ profile }: NavbarProps) {
     }
   };
 
+  const handleToggleRevealCode = () => {
+    if (revealCode) {
+      setRevealCode(false);
+    } else {
+      if (isPasswordVerified) {
+        setRevealCode(true);
+      } else {
+        setShowPasswordAuthModal(true);
+      }
+    }
+  };
+
   const handleCopyCode = (codeText: string) => {
+    if (!isPasswordVerified) {
+      setShowPasswordAuthModal(true);
+      return;
+    }
     navigator.clipboard.writeText(codeText);
     setCopiedCode(true);
     toast.success('Workspace Join Code copied to clipboard!');
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleVerifyPasswordAndReveal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teacherAuthPassword.trim()) {
+      toast.error('Please enter your account password to authenticate.');
+      return;
+    }
+
+    setIsVerifyingPassword(true);
+    const res = await verifyTeacherPasswordAction(teacherAuthPassword);
+    setIsVerifyingPassword(false);
+
+    if (!res.success) {
+      toast.error(res.error || 'Password verification failed.');
+    } else {
+      setIsPasswordVerified(true);
+      setRevealCode(true);
+      setShowPasswordAuthModal(false);
+      setTeacherAuthPassword('');
+      toast.success('Identity verified! Join Code unmasked.');
+    }
   };
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
@@ -551,18 +597,21 @@ export default function Navbar({ profile }: NavbarProps) {
                       </div>
                       <h4 className="text-xl font-bold text-theme-main">{institution.name}</h4>
 
-                      {/* SECURE JOIN CODE BOX (HIDDEN BY DEFAULT WITH REVEAL & COPY BUTTONS) */}
+                      {/* SECURE JOIN CODE BOX (PROTECTED BY PASSWORD AUTH GATE) */}
                       <div className="bg-theme-card p-3 rounded-lg border border-theme space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-theme-sub font-medium">Private Join Code:</span>
                           <div className="flex items-center space-x-1">
                             <button
                               type="button"
-                              onClick={() => setRevealCode(!revealCode)}
-                              className="p-1 text-theme-sub hover:text-theme-main rounded transition-colors"
-                              title={revealCode ? 'Hide Join Code' : 'Reveal Join Code'}
+                              onClick={handleToggleRevealCode}
+                              className="p-1 text-theme-sub hover:text-theme-main rounded transition-colors flex items-center space-x-1 text-xs font-semibold"
+                              title={revealCode ? 'Hide Join Code' : 'Password required to reveal code'}
                             >
-                              {revealCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              {revealCode ? <EyeOff className="w-4 h-4 text-indigo-500" /> : <Eye className="w-4 h-4 text-indigo-500" />}
+                              <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                                {revealCode ? 'Hide' : 'Reveal'}
+                              </span>
                             </button>
                             <button
                               type="button"
@@ -575,7 +624,7 @@ export default function Navbar({ profile }: NavbarProps) {
                           </div>
                         </div>
 
-                        <div className="font-mono text-center text-lg font-bold tracking-widest text-indigo-600 dark:text-indigo-300 py-1 bg-indigo-500/5 rounded border border-indigo-500/20">
+                        <div className="font-mono text-center text-lg font-bold tracking-widest text-indigo-600 dark:text-indigo-300 py-1.5 bg-indigo-500/5 rounded border border-indigo-500/20">
                           {revealCode ? institution.code : '••••••••'}
                         </div>
                       </div>
@@ -671,6 +720,68 @@ export default function Navbar({ profile }: NavbarProps) {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TEACHER PASSWORD VERIFICATION SECURITY MODAL */}
+      {showPasswordAuthModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-theme-card border border-indigo-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center space-x-3 text-indigo-600 dark:text-indigo-400 border-b border-theme pb-3">
+              <div className="p-2 bg-indigo-500/10 rounded-xl">
+                <ShieldAlert className="w-6 h-6 text-indigo-500" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-theme-main">Password Verification Required</h3>
+                <p className="text-[11px] text-theme-sub">Security check to unmask private Join Code</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleVerifyPasswordAndReveal} className="space-y-4 pt-1">
+              <p className="text-xs text-theme-sub">
+                Enter your account password to verify your identity before revealing your institution's private Join Code.
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-theme-main mb-1">
+                  Account Password / Verification Email
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  value={teacherAuthPassword}
+                  onChange={(e) => setTeacherAuthPassword(e.target.value)}
+                  placeholder="Enter your account password"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-theme bg-theme-input text-theme-main focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[10px] text-theme-sub mt-1">
+                  *(Google OAuth users without a password: enter your account email)*
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordAuthModal(false);
+                    setTeacherAuthPassword('');
+                  }}
+                  className="flex-1 py-2 bg-slate-200 dark:bg-slate-800 text-theme-main text-xs font-bold rounded-xl hover:opacity-80 transition-opacity"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isVerifyingPassword}
+                  className="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                >
+                  {isVerifyingPassword ? 'Verifying...' : 'Verify & Reveal Code'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

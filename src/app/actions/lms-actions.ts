@@ -1,6 +1,6 @@
 'use server';
 
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth, currentUser, clerkClient } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db/prisma';
 import { formatCloudinaryFileUrl } from '@/lib/utils/url-helper';
 import { CEFRLevel, Role } from '@prisma/client';
@@ -160,6 +160,45 @@ export async function getPendingStudentsAction() {
     return { success: true, students: pendingStudents };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to fetch pending student requests.' };
+  }
+}
+
+export async function verifyTeacherPasswordAction(password: string) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    if (!password || password.trim().length === 0) {
+      return { success: false, error: 'Password or account verification is required.' };
+    }
+
+    const client = await clerkClient();
+
+    if (user.passwordEnabled) {
+      const verifyRes = await client.users.verifyPassword({
+        userId: user.id,
+        password: password.trim(),
+      });
+
+      if (!verifyRes.verified) {
+        return { success: false, error: 'Incorrect account password. Access denied.' };
+      }
+    } else {
+      // Google OAuth users: verify against primary email address
+      const primaryEmail = user.primaryEmailAddress?.emailAddress?.toLowerCase();
+      const entered = password.trim().toLowerCase();
+
+      if (entered !== primaryEmail) {
+        return {
+          success: false,
+          error: `Google Sign-In Account: Please enter your email address (${primaryEmail}) to confirm identity.`,
+        };
+      }
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to verify account password.' };
   }
 }
 
