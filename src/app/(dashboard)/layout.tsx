@@ -21,16 +21,29 @@ export default async function DashboardLayout({
       const metadataRole = (user.publicMetadata as any)?.role || (user.unsafeMetadata as any)?.role;
       const targetRole = metadataRole === 'TEACHER' ? 'TEACHER' : 'STUDENT';
 
-      // Auto-create profile in Prisma if missing
+      // Auto-create profile in Prisma if missing, cleaning up any stale profiles from deleted Clerk accounts
       if (!profile && user.primaryEmailAddress) {
-        const emailPrefix = user.primaryEmailAddress.emailAddress.split('@')[0];
+        const userEmail = user.primaryEmailAddress.emailAddress;
+        const emailPrefix = userEmail.split('@')[0];
         const displayName = user.fullName || user.username || user.firstName || emailPrefix;
+
+        // Clean up stale profile with matching email if previously deleted from Clerk
+        const staleProfile = await prisma.profile.findUnique({
+          where: { email: userEmail },
+        });
+
+        if (staleProfile) {
+          await prisma.homeworkSubmission.deleteMany({ where: { studentId: staleProfile.id } });
+          await prisma.quizSubmission.deleteMany({ where: { studentId: staleProfile.id } });
+          await prisma.attendanceRecord.deleteMany({ where: { studentId: staleProfile.id } });
+          await prisma.profile.delete({ where: { id: staleProfile.id } });
+        }
 
         profile = await prisma.profile.create({
           data: {
             id: user.id,
             fullName: displayName,
-            email: user.primaryEmailAddress.emailAddress,
+            email: userEmail,
             role: targetRole,
             isActive: true,
           },

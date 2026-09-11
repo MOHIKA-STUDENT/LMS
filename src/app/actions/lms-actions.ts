@@ -413,6 +413,9 @@ export async function updateStudentAccessAction(studentId: string, isActive: boo
 
 export async function deleteStudentAction(studentId: string) {
   try {
+    await prisma.homeworkSubmission.deleteMany({ where: { studentId } });
+    await prisma.quizSubmission.deleteMany({ where: { studentId } });
+    await prisma.attendanceRecord.deleteMany({ where: { studentId } });
     await prisma.profile.delete({
       where: { id: studentId },
     });

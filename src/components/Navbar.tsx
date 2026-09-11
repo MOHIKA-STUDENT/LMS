@@ -21,14 +21,12 @@ import {
   Award,
   LayoutDashboard,
   CheckSquare,
-  Settings,
   Video,
   CreditCard,
   UserCheck,
   Sun,
   Moon,
   Download,
-  User,
   X,
   ChevronRight,
   ShieldCheck,
@@ -39,6 +37,10 @@ import {
   KeyRound,
   AlertTriangle,
   Lock,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -56,6 +58,8 @@ export default function Navbar({ profile }: NavbarProps) {
   // Institution / Workspace state
   const [institution, setInstitution] = useState<any>(profile?.institution || null);
   const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
+  const [revealCode, setRevealCode] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [workspaceNameInput, setWorkspaceNameInput] = useState('');
   const [workspaceCodeInput, setWorkspaceCodeInput] = useState('');
   const [joinCodeInput, setJoinCodeInput] = useState('');
@@ -94,6 +98,13 @@ export default function Navbar({ profile }: NavbarProps) {
         { duration: 6000 }
       );
     }
+  };
+
+  const handleCopyCode = (codeText: string) => {
+    navigator.clipboard.writeText(codeText);
+    setCopiedCode(true);
+    toast.success('Workspace Join Code copied to clipboard!');
+    setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
@@ -145,7 +156,7 @@ export default function Navbar({ profile }: NavbarProps) {
     { href: '/admin/batches', label: 'Batches', icon: LayoutDashboard },
     { href: '/admin/roster', label: 'Roster', icon: Users },
     { href: '/admin/quiz-gen', label: 'Quizzes', icon: Sparkles },
-    { href: '/admin/attendance-fees', label: 'Attendance & Fees', icon: CreditCard },
+    { href: '/admin/attendance-fees', label: 'Fees', icon: CreditCard },
     { href: '/admin/recordings', label: 'Recordings', icon: Video },
     { href: '/admin/materials', label: 'Materials', icon: BookOpen },
     { href: '/admin/grading', label: 'Grading', icon: CheckSquare },
@@ -157,32 +168,63 @@ export default function Navbar({ profile }: NavbarProps) {
     { href: '/student/homework', label: 'Homework', icon: FileText },
     { href: '/student/notes', label: 'Vault', icon: BookOpen },
     { href: '/student/recordings', label: 'Recordings', icon: Video },
-    { href: '/student/fees-attendance', label: 'Fees & Attendance', icon: UserCheck },
-    { href: '/student/leaderboard', label: 'Leaderboard', icon: Award },
+    { href: '/student/fees-attendance', label: 'Attendance', icon: UserCheck },
+    { href: '/student/leaderboard', label: 'Ranks', icon: Award },
   ];
 
   const navLinks = isTeacher ? teacherLinks : studentLinks;
 
-  // Primary 4 tabs for mobile bottom bar (no scrolling required!)
+  // Primary 4 tabs for mobile bottom bar
   const mobilePrimaryLinks = navLinks.slice(0, 4);
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-theme-nav backdrop-blur border-b border-theme text-theme-main transition-colors duration-200 shadow-sm">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <Link
-            href={isTeacher ? '/admin/batches' : '/student/timeline'}
-            className="flex items-center space-x-2 font-bold text-lg sm:text-xl text-indigo-600 dark:text-indigo-400 hover:opacity-90 transition-opacity shrink-0"
-          >
-            <BookOpen className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-500" />
-            <span>
-              Vedayan<span className="text-theme-main"> LMS</span>
-            </span>
-          </Link>
+      <header className="sticky top-0 z-40 bg-theme-nav/95 backdrop-blur border-b border-theme text-theme-main transition-colors duration-200 shadow-sm">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+          {/* Logo & Workspace Tag */}
+          <div className="flex items-center space-x-3 shrink-0">
+            <Link
+              href={isTeacher ? '/admin/batches' : '/student/timeline'}
+              className="flex items-center space-x-2 font-bold text-base sm:text-lg text-indigo-600 dark:text-indigo-400 hover:opacity-90 transition-opacity shrink-0"
+            >
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
+              <span>
+                Vedayan<span className="text-theme-main"> LMS</span>
+              </span>
+            </Link>
+
+            {/* Header Workspace Badge (CONCEALED CODE FOR SECURITY & PRIVACY) */}
+            {institution ? (
+              <button
+                onClick={() => isTeacher && setShowWorkspaceModal(true)}
+                className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 rounded-lg hover:bg-indigo-500/20 transition-all shadow-xs"
+                title={isTeacher ? 'Click to manage workspace code securely' : 'Active Institution'}
+              >
+                <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="font-bold max-w-[130px] truncate">{institution.name}</span>
+                <Lock className="w-3 h-3 text-indigo-400 opacity-80" />
+              </button>
+            ) : isTeacher ? (
+              <button
+                onClick={() => setShowWorkspaceModal(true)}
+                className="hidden lg:flex items-center space-x-1 px-2.5 py-1 text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Workspace</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowWorkspaceModal(true)}
+                className="hidden lg:flex items-center space-x-1 px-2.5 py-1 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors shadow-xs"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Join Workspace</span>
+              </button>
+            )}
+          </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden md:flex items-center space-x-1 lg:space-x-1.5 overflow-x-auto py-1 scrollbar-none">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname.startsWith(link.href);
@@ -190,88 +232,51 @@ export default function Navbar({ profile }: NavbarProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-1.5 transition-all ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs lg:text-sm font-medium flex items-center space-x-1 transition-all whitespace-nowrap ${
                     isActive
                       ? 'bg-indigo-600/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 font-bold'
                       : 'text-theme-sub hover:bg-slate-200/60 dark:hover:bg-slate-800 hover:text-theme-main'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0" />
                   <span>{link.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* User Info & Header Controls */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* DESKTOP-ONLY ACTIONS */}
+          {/* Header Controls & User Info */}
+          <div className="flex items-center space-x-2 shrink-0">
+            {/* DESKTOP-ONLY CONTROLS */}
             <div className="hidden md:flex items-center space-x-2">
-              {/* Institution / Workspace Badge or Join Button */}
-              {institution ? (
-                <div
-                  onClick={() => isTeacher && setShowWorkspaceModal(true)}
-                  className="px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 rounded-lg flex items-center gap-1.5 cursor-pointer hover:bg-indigo-500/20 transition-all"
-                  title={isTeacher ? 'Click to manage workspace code' : 'Active Institution'}
-                >
-                  <Building2 className="w-3.5 h-3.5 text-indigo-500" />
-                  <span className="font-bold max-w-[120px] truncate">{institution.name}</span>
-                  {institution.code && (
-                    <span className="font-mono text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-bold">
-                      {institution.code}
-                    </span>
-                  )}
-                </div>
-              ) : isTeacher ? (
-                <button
-                  onClick={() => setShowWorkspaceModal(true)}
-                  className="px-2.5 py-1.5 text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Create Workspace</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowWorkspaceModal(true)}
-                  className="px-2.5 py-1.5 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span>Join Workspace</span>
-                </button>
-              )}
-
               <button
                 onClick={handleInstallPWA}
-                className="px-2.5 py-1.5 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold border border-indigo-500/30"
+                className="p-1.5 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors border border-indigo-500/30 flex items-center gap-1 text-xs font-semibold"
                 title="Install Mobile App"
               >
                 <Download className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Install App</span>
+                <span className="hidden xl:inline">App</span>
               </button>
 
               <button
                 onClick={toggleTheme}
-                className="px-2.5 py-1.5 text-theme-sub hover:text-amber-500 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold border border-theme"
+                className="p-1.5 text-theme-sub hover:text-amber-500 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors border border-theme flex items-center gap-1 text-xs font-semibold"
                 title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
               >
                 {theme === 'dark' ? (
-                  <>
-                    <Sun className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-amber-400">Light</span>
-                  </>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
                 ) : (
-                  <>
-                    <Moon className="w-3.5 h-3.5 text-indigo-600" />
-                    <span className="text-indigo-600">Dark</span>
-                  </>
+                  <Moon className="w-3.5 h-3.5 text-indigo-600" />
                 )}
               </button>
 
               {isLoaded && user && (
-                <div className="flex flex-col items-end text-xs">
-                  <span className="font-semibold text-theme-main max-w-[130px] truncate">{displayName}</span>
+                <div className="flex flex-col items-end text-xs leading-tight">
+                  <span className="font-bold text-theme-main max-w-[110px] xl:max-w-[140px] truncate">
+                    {displayName}
+                  </span>
                   <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-medium flex items-center gap-1">
-                    {role} {role === 'STUDENT' && profile ? `• ${profile.points} pts` : ''}
+                    {role}
                     {profile?.status === 'PENDING' && (
                       <span className="bg-amber-500/20 text-amber-500 text-[9px] font-bold px-1 rounded">PENDING</span>
                     )}
@@ -282,22 +287,24 @@ export default function Navbar({ profile }: NavbarProps) {
               {isTeacher && (
                 <Link
                   href={pathname.startsWith('/admin') ? '/student/timeline' : '/admin/batches'}
-                  className="px-2.5 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-300 rounded-lg text-[11px] font-bold border border-purple-500/30 transition-colors flex items-center gap-1"
+                  className="px-2 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-300 rounded-lg text-[11px] font-bold border border-purple-500/30 transition-colors flex items-center gap-1"
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
-                  <span>{pathname.startsWith('/admin') ? 'Student View' : 'Teacher View'}</span>
+                  <span className="hidden xl:inline">
+                    {pathname.startsWith('/admin') ? 'Student View' : 'Teacher View'}
+                  </span>
                 </Link>
               )}
 
               <UserButton />
             </div>
 
-            {/* MOBILE-ONLY CLEAN PROFILE & MENU TRIGGER BUTTON */}
+            {/* MOBILE-ONLY TRIGGER BUTTON */}
             <div className="md:hidden flex items-center space-x-2">
               <button
                 onClick={() => setProfileDrawerOpen(true)}
-                className="p-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 flex items-center space-x-1.5 shadow-sm active:scale-95 transition-all"
-                aria-label="Open Navigation & Profile Menu"
+                className="p-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 flex items-center space-x-1 shadow-sm active:scale-95 transition-all"
+                aria-label="Open Navigation Menu"
               >
                 <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold uppercase">
                   {displayName?.charAt(0) || 'U'}
@@ -324,7 +331,6 @@ export default function Navbar({ profile }: NavbarProps) {
       {profileDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end animate-fadeIn md:hidden">
           <div className="w-[85%] max-w-sm bg-theme-card border-l border-theme h-full flex flex-col justify-between shadow-2xl p-5 overflow-y-auto">
-            {/* Drawer Header */}
             <div className="space-y-5">
               <div className="flex items-center justify-between border-b border-theme pb-4">
                 <div className="flex items-center space-x-3">
@@ -350,10 +356,33 @@ export default function Navbar({ profile }: NavbarProps) {
                 </button>
               </div>
 
+              {/* Mobile Workspace Info */}
+              {institution && (
+                <div className="bg-indigo-500/10 border border-indigo-500/30 p-3 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Building2 className="w-4 h-4 text-indigo-500" />
+                    <div>
+                      <p className="text-[10px] text-theme-sub font-semibold uppercase">Active Institution</p>
+                      <p className="text-xs font-bold text-theme-main">{institution.name}</p>
+                    </div>
+                  </div>
+                  {isTeacher && (
+                    <button
+                      onClick={() => {
+                        setProfileDrawerOpen(false);
+                        setShowWorkspaceModal(true);
+                      }}
+                      className="px-2 py-1 text-[10px] font-bold bg-indigo-600 text-white rounded-lg"
+                    >
+                      Manage Code
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* All Section Links */}
               <div className="space-y-2">
                 <p className="text-[10px] font-bold uppercase text-theme-sub tracking-wider">All Sections</p>
-
                 <div className="grid grid-cols-1 gap-1">
                   {navLinks.map((link) => {
                     const Icon = link.icon;
@@ -384,19 +413,18 @@ export default function Navbar({ profile }: NavbarProps) {
               <div className="space-y-3 pt-2 border-t border-theme">
                 <p className="text-[10px] font-bold uppercase text-theme-sub tracking-wider">App Preferences</p>
 
-                {/* LIGHT / DARK THEME TOGGLE BUTTON */}
                 <button
                   onClick={toggleTheme}
-                  className="w-full p-3.5 bg-theme-card-sub border border-theme rounded-2xl flex items-center justify-between hover:opacity-90 transition-all text-left shadow-sm"
+                  className="w-full p-3 bg-theme-card-sub border border-theme rounded-2xl flex items-center justify-between hover:opacity-90 transition-all text-left shadow-sm"
                 >
                   <div className="flex items-center space-x-3">
                     {theme === 'dark' ? (
-                      <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-                        <Sun className="w-5 h-5" />
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                        <Sun className="w-4 h-4" />
                       </div>
                     ) : (
-                      <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-600 flex items-center justify-center">
-                        <Moon className="w-5 h-5" />
+                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-600 flex items-center justify-center">
+                        <Moon className="w-4 h-4" />
                       </div>
                     )}
                     <div>
@@ -408,63 +436,47 @@ export default function Navbar({ profile }: NavbarProps) {
                       </p>
                     </div>
                   </div>
-
-                  <span
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase font-mono ${
-                      theme === 'dark'
-                        ? 'bg-amber-400/20 text-amber-400 border border-amber-400/40'
-                        : 'bg-indigo-600/20 text-indigo-600 border border-indigo-500/40'
-                    }`}
-                  >
-                    {theme === 'dark' ? 'Dark' : 'Light'}
-                  </span>
                 </button>
 
-                {/* INSTALL LMS APP BUTTON */}
                 <button
                   onClick={() => {
                     setProfileDrawerOpen(false);
                     handleInstallPWA();
                   }}
-                  className="w-full p-3.5 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl flex items-center justify-between hover:bg-indigo-500/20 transition-all text-left"
+                  className="w-full p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl flex items-center justify-between hover:bg-indigo-500/20 transition-all text-left"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
-                      <Download className="w-5 h-5" />
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                      <Download className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-theme-main">Install App (PWA)</p>
                       <p className="text-[10px] text-theme-sub mt-0.5">Add LMS to home screen</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-indigo-500" />
                 </button>
 
-                {/* TEACHER / STUDENT ROLE SWITCHER */}
                 {isTeacher && (
                   <Link
                     href={pathname.startsWith('/admin') ? '/student/timeline' : '/admin/batches'}
                     onClick={() => setProfileDrawerOpen(false)}
-                    className="w-full p-3.5 bg-purple-500/10 border border-purple-500/30 rounded-2xl flex items-center justify-between hover:bg-purple-500/20 transition-all text-left block"
+                    className="w-full p-3 bg-purple-500/10 border border-purple-500/30 rounded-2xl flex items-center justify-between hover:bg-purple-500/20 transition-all text-left block"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center">
-                        <LayoutDashboard className="w-5 h-5" />
+                      <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center">
+                        <LayoutDashboard className="w-4 h-4" />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-theme-main">
                           {pathname.startsWith('/admin') ? 'Switch to Student View' : 'Switch to Teacher View'}
                         </p>
-                        <p className="text-[10px] text-theme-sub mt-0.5">Toggle admin / portal preview</p>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-purple-500" />
                   </Link>
                 )}
               </div>
             </div>
 
-            {/* Drawer Footer & Account Sign Out */}
             <div className="pt-4 border-t border-theme flex items-center justify-between mt-4">
               <span className="text-[11px] text-theme-sub font-mono">Account Profile</span>
               <UserButton />
@@ -473,7 +485,7 @@ export default function Navbar({ profile }: NavbarProps) {
         </div>
       )}
 
-      {/* ULTRA-CLEAN 5-TAB MOBILE BOTTOM NAVIGATION BAR (Fits 100% of screens with NO scrolling!) */}
+      {/* MOBILE BOTTOM NAV BAR */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-theme-card/95 backdrop-blur border-t border-theme px-2 py-1.5 grid grid-cols-5 gap-1 text-theme-sub shadow-2xl">
         {mobilePrimaryLinks.map((link) => {
           const Icon = link.icon;
@@ -494,7 +506,6 @@ export default function Navbar({ profile }: NavbarProps) {
           );
         })}
 
-        {/* 5th Tab: MORE Button */}
         <button
           onClick={() => setProfileDrawerOpen(true)}
           className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl text-[10px] font-medium transition-all ${
@@ -508,7 +519,7 @@ export default function Navbar({ profile }: NavbarProps) {
         </button>
       </nav>
 
-      {/* INSTITUTION WORKSPACE MODAL */}
+      {/* SECURE INSTITUTION WORKSPACE MODAL */}
       {showWorkspaceModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-theme-card border border-theme rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
@@ -531,21 +542,47 @@ export default function Navbar({ profile }: NavbarProps) {
               <div>
                 {institution ? (
                   <div className="space-y-4">
-                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-xl space-y-2">
-                      <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                        Active Workspace
-                      </p>
+                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                          Active Workspace
+                        </p>
+                        <Lock className="w-3.5 h-3.5 text-indigo-400" />
+                      </div>
                       <h4 className="text-xl font-bold text-theme-main">{institution.name}</h4>
-                      <div className="flex items-center space-x-2 pt-1">
-                        <span className="text-xs text-theme-sub">Share Student Join Code:</span>
-                        <span className="font-mono text-sm font-bold bg-indigo-600 text-white px-2 py-0.5 rounded">
-                          {institution.code}
-                        </span>
+
+                      {/* SECURE JOIN CODE BOX (HIDDEN BY DEFAULT WITH REVEAL & COPY BUTTONS) */}
+                      <div className="bg-theme-card p-3 rounded-lg border border-theme space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-theme-sub font-medium">Private Join Code:</span>
+                          <div className="flex items-center space-x-1">
+                            <button
+                              type="button"
+                              onClick={() => setRevealCode(!revealCode)}
+                              className="p-1 text-theme-sub hover:text-theme-main rounded transition-colors"
+                              title={revealCode ? 'Hide Join Code' : 'Reveal Join Code'}
+                            >
+                              {revealCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCode(institution.code)}
+                              className="px-2 py-1 bg-indigo-600 text-white text-xs font-bold rounded flex items-center space-x-1 hover:bg-indigo-700 transition-colors"
+                            >
+                              {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                              <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="font-mono text-center text-lg font-bold tracking-widest text-indigo-600 dark:text-indigo-300 py-1 bg-indigo-500/5 rounded border border-indigo-500/20">
+                          {revealCode ? institution.code : '••••••••'}
+                        </div>
                       </div>
                     </div>
 
                     <p className="text-xs text-theme-sub">
-                      Students must enter this code when signing up to access your courses, quizzes, and homework.
+                      Share this private Join Code with your students. Newly registered students will enter this code to request access to your courses and quizzes.
                     </p>
 
                     <button
@@ -577,7 +614,7 @@ export default function Navbar({ profile }: NavbarProps) {
 
                     <div>
                       <label className="block text-xs font-bold text-theme-main mb-1">
-                        Unique Join Code for Students
+                        Unique Private Join Code for Students
                       </label>
                       <input
                         type="text"
@@ -602,7 +639,7 @@ export default function Navbar({ profile }: NavbarProps) {
             ) : (
               <form onSubmit={handleJoinWorkspace} className="space-y-4">
                 <p className="text-xs text-theme-sub">
-                  Enter the unique workspace code provided by your teacher or institution to access your specific courses and quizzes.
+                  Enter the private workspace code provided by your teacher to request access to your courses and quizzes.
                 </p>
 
                 <div>
