@@ -6,6 +6,164 @@ import { formatCloudinaryFileUrl } from '@/lib/utils/url-helper';
 import { CEFRLevel, Role } from '@prisma/client';
 
 // ==========================================
+// INSTITUTION WORKSPACE ACTIONS
+// ==========================================
+export async function createInstitutionAction(
+  dataOrName: { name: string; code: string; description?: string } | string,
+  codeArg?: string
+) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const name = typeof dataOrName === 'string' ? dataOrName : dataOrName.name;
+    const rawCode = typeof dataOrName === 'string' ? codeArg || '' : dataOrName.code;
+    const description = typeof dataOrName === 'object' ? dataOrName.description : undefined;
+
+    const cleanCode = rawCode.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+    if (!cleanCode || cleanCode.length < 3) {
+      return { success: false, error: 'Workspace Join Code must be at least 3 alphanumeric characters (e.g. OXFORD-2026).' };
+    }
+
+    const existing = await prisma.institution.findUnique({ where: { code: cleanCode } });
+    if (existing) {
+      return { success: false, error: `Institution Join Code '${cleanCode}' is already registered.` };
+    }
+
+    const inst = await prisma.institution.create({
+      data: {
+        name,
+        code: cleanCode,
+        description: description || null,
+      },
+    });
+
+    // Link teacher's profile to this institution workspace & approve teacher
+    const profile = await prisma.profile.upsert({
+      where: { id: user.id },
+      create: {
+        id: user.id,
+        role: 'TEACHER',
+        fullName: user.fullName || user.username || user.primaryEmailAddress?.emailAddress || 'Teacher',
+        email: user.primaryEmailAddress?.emailAddress || user.id,
+        institutionId: inst.id,
+        status: 'APPROVED',
+      },
+      update: {
+        institutionId: inst.id,
+        role: 'TEACHER',
+        status: 'APPROVED',
+      },
+    });
+
+    return { success: true, institution: inst, profile };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to create Institution Workspace.' };
+  }
+}
+
+export async function getInstitutionDetailsAction() {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const profile = await prisma.profile.findUnique({
+      where: { id: user.id },
+      include: { institution: true },
+    });
+
+    return { success: true, profile, institution: profile?.institution || null };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch institution details.' };
+  }
+}
+
+export async function joinInstitutionByCodeAction(institutionCode: string) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const cleanCode = institutionCode.trim().toUpperCase();
+    const inst = await prisma.institution.findUnique({ where: { code: cleanCode } });
+
+    if (!inst) {
+      return { success: false, error: `Invalid Workspace Code '${cleanCode}'. Please check with your College Admin.` };
+    }
+
+    const role = (user.publicMetadata as any)?.role || (user.unsafeMetadata as any)?.role || 'STUDENT';
+
+    const profile = await prisma.profile.upsert({
+      where: { id: user.id },
+      create: {
+        id: user.id,
+        role,
+        fullName: user.fullName || user.username || user.primaryEmailAddress?.emailAddress || 'Student',
+        email: user.primaryEmailAddress?.emailAddress || user.id,
+        institutionId: inst.id,
+        status: role === 'TEACHER' ? 'APPROVED' : 'PENDING',
+      },
+      update: {
+        institutionId: inst.id,
+        status: role === 'TEACHER' ? 'APPROVED' : 'PENDING',
+      },
+    });
+
+    return { success: true, institution: inst, profile };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to join Institution Workspace.' };
+  }
+}
+
+export async function approveStudentAction(studentId: string, status: 'APPROVED' | 'REJECTED') {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const teacherProfile = await prisma.profile.findUnique({ where: { id: user.id } });
+    if (!teacherProfile || teacherProfile.role !== 'TEACHER') {
+      return { success: false, error: 'Only teachers can approve or reject student access requests.' };
+    }
+
+    const updatedStudent = await prisma.profile.update({
+      where: { id: studentId },
+      data: {
+        status,
+        isActive: status === 'APPROVED',
+      },
+    });
+
+    return { success: true, student: updatedStudent };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update student approval status.' };
+  }
+}
+
+export async function getPendingStudentsAction() {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const teacherProfile = await prisma.profile.findUnique({ where: { id: user.id } });
+    if (!teacherProfile || teacherProfile.role !== 'TEACHER') {
+      return { success: false, error: 'Unauthorized.' };
+    }
+
+    const pendingStudents = await prisma.profile.findMany({
+      where: {
+        role: 'STUDENT',
+        institutionId: teacherProfile.institutionId,
+        status: 'PENDING',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { success: true, students: pendingStudents };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to fetch pending student requests.' };
+  }
+}
+
+// ==========================================
 // BATCH ACTIONS
 // ==========================================
 export async function getBatchesAction() {
@@ -16,9 +174,9 @@ export async function getBatchesAction() {
     if (user) {
       const profile = await prisma.profile.findUnique({ where: { id: user.id } });
       if (profile?.role === 'TEACHER') {
-        // Teacher sees their own batches or unassigned teacherId batches
         whereClause = {
           OR: [
+            { institutionId: profile.institutionId },
             { teacherId: user.id },
             { teacherId: null },
           ],
@@ -59,6 +217,7 @@ export async function createBatchAction(data: {
 
     const batch = await prisma.batch.create({
       data: {
+        institutionId: profile?.institutionId || null,
         teacherId: user.id,
         joinCode,
         name: data.name,
@@ -210,7 +369,10 @@ export async function getRosterAction() {
     if (profile?.role === 'TEACHER') {
       whereClause = {
         role: 'STUDENT',
-        batch: { teacherId: user.id },
+        OR: [
+          { institutionId: profile.institutionId },
+          { batch: { teacherId: user.id } },
+        ],
       };
     }
 
@@ -482,8 +644,24 @@ export async function gradeSubmissionAction(
 // ==========================================
 export async function getLeaderboardAction() {
   try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    if (!profile || profile.status === 'PENDING') {
+      return { success: true, profiles: [] };
+    }
+
+    // STRICT MULTI-TENANT ISOLATION:
+    // Leaderboard returns ONLY approved students from the SAME institution workspace
+    const whereClause: any = {
+      role: 'STUDENT',
+      status: 'APPROVED',
+      institutionId: profile.institutionId,
+    };
+
     const profiles = await prisma.profile.findMany({
-      where: { role: 'STUDENT' },
+      where: whereClause,
       include: { batch: true },
       orderBy: { points: 'desc' },
     });
@@ -1275,5 +1453,6 @@ export async function updateProfileAvatarAction(formData: FormData) {
     return { success: false, error: err.message || 'Failed to update avatar.' };
   }
 }
+
 
 

@@ -11,17 +11,27 @@ export interface Batch {
   created_at: string;
 }
 
+export interface Institution {
+  id: string;
+  name: string;
+  code: string;
+  createdAt?: string;
+}
+
 export interface Profile {
   id: string;
   fullName: string;
   email: string;
   role: UserRole;
   batchId?: string | null;
+  institutionId?: string | null;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
   avatarUrl?: string | null;
   points: number;
   isActive: boolean;
   createdAt: string;
   batch?: Batch | null;
+  institution?: Institution | null;
 }
 
 export interface CourseMaterial {

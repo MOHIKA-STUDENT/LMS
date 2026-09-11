@@ -4,16 +4,19 @@ import { useState, useEffect } from 'react';
 import {
   getRosterAction,
   getBatchesAction,
+  getPendingStudentsAction,
+  approveStudentAction,
   updateStudentBatchAction,
   updateStudentAccessAction,
   deleteStudentAction,
 } from '@/app/actions/lms-actions';
 import { formatStudentDisplayName } from '@/lib/utils/format-name';
-import { Users, Award, Shield, CheckCircle2, Edit, Trash2, UserX, UserCheck, Search, X } from 'lucide-react';
+import { Users, Award, Shield, CheckCircle2, Edit, Trash2, UserX, UserCheck, Search, X, Clock, ShieldAlert, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function RosterPage() {
   const [students, setStudents] = useState<any[]>([]);
+  const [pendingStudents, setPendingStudents] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +32,7 @@ export default function RosterPage() {
     setLoading(true);
     const rosterRes = await getRosterAction();
     const batchRes = await getBatchesAction();
+    const pendingRes = await getPendingStudentsAction();
 
     if (rosterRes.success && rosterRes.profiles) {
       setStudents(rosterRes.profiles);
@@ -36,12 +40,25 @@ export default function RosterPage() {
     if (batchRes.success && batchRes.batches) {
       setBatches(batchRes.batches);
     }
+    if (pendingRes.success && pendingRes.students) {
+      setPendingStudents(pendingRes.students);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleApproveStudent = async (studentId: string, status: 'APPROVED' | 'REJECTED') => {
+    const res = await approveStudentAction(studentId, status);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to update student access.');
+    } else {
+      toast.success(status === 'APPROVED' ? 'Student approved for workspace!' : 'Student workspace request rejected.');
+      fetchData();
+    }
+  };
 
   const handleAssignBatch = async (studentId: string, batchId: string) => {
     const res = await updateStudentBatchAction(studentId, batchId || null);
@@ -118,7 +135,7 @@ export default function RosterPage() {
             <Users className="w-7 h-7 text-indigo-500" />
             <span>Student Roster & Permissions Manager</span>
           </h1>
-          <p className="text-sm text-theme-sub mt-1">Manage student accounts, edit details, assign batches, toggle portal permissions, or remove students</p>
+          <p className="text-sm text-theme-sub mt-1">Manage student accounts, edit details, approve workspace requests, assign batches, or suspend access</p>
         </div>
 
         {/* Search Bar */}
@@ -133,6 +150,52 @@ export default function RosterPage() {
           />
         </div>
       </div>
+
+      {/* PENDING STUDENT WORKSPACE REQUESTS */}
+      {pendingStudents.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-theme-card to-amber-500/10 border border-amber-500/30 rounded-2xl p-5 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-amber-600 dark:text-amber-300 flex items-center space-x-2">
+              <ShieldAlert className="w-5 h-5 text-amber-500 animate-bounce" />
+              <span>Pending Student Access Requests ({pendingStudents.length})</span>
+            </h2>
+            <span className="text-xs text-theme-sub font-medium">Approval required before students can view notes or quizzes</span>
+          </div>
+
+          <div className="divide-y divide-theme border-t border-theme pt-2">
+            {pendingStudents.map((p) => (
+              <div key={p.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 flex items-center justify-center font-bold text-sm border border-amber-500/30">
+                    {formatStudentDisplayName(p.fullName, p.email).charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-theme-main text-sm">{formatStudentDisplayName(p.fullName, p.email)}</h4>
+                    <p className="text-xs text-theme-sub font-mono">{p.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleApproveStudent(p.id, 'APPROVED')}
+                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow transition-all"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Approve Student</span>
+                  </button>
+                  <button
+                    onClick={() => handleApproveStudent(p.id, 'REJECTED')}
+                    className="px-3 py-1.5 bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Reject</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="py-12 text-center text-theme-sub animate-pulse">Loading student roster...</div>
@@ -165,11 +228,11 @@ export default function RosterPage() {
                     <td className="px-6 py-4 text-theme-sub font-mono text-xs">{student.email}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        student.isActive !== false
+                        student.isActive !== false && student.status !== 'PENDING'
                           ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                           : 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30'
                       }`}>
-                        {student.isActive !== false ? (
+                        {student.isActive !== false && student.status !== 'PENDING' ? (
                           <>
                             <UserCheck className="w-3 h-3 mr-1 text-emerald-500" />
                             <span>Active</span>
@@ -177,7 +240,7 @@ export default function RosterPage() {
                         ) : (
                           <>
                             <UserX className="w-3 h-3 mr-1 text-rose-500" />
-                            <span>Suspended</span>
+                            <span>{student.status === 'PENDING' ? 'Pending Approval' : 'Suspended'}</span>
                           </>
                         )}
                       </span>

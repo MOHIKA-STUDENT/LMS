@@ -8,6 +8,11 @@ import { Profile } from '@/types/database';
 import { formatStudentDisplayName } from '@/lib/utils/format-name';
 import { useTheme } from '@/components/ThemeProvider';
 import {
+  createInstitutionAction,
+  joinInstitutionByCodeAction,
+  getInstitutionDetailsAction,
+} from '@/app/actions/lms-actions';
+import {
   BookOpen,
   Users,
   Calendar,
@@ -29,6 +34,11 @@ import {
   ShieldCheck,
   MoreHorizontal,
   Grid,
+  Building2,
+  Plus,
+  KeyRound,
+  AlertTriangle,
+  Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -43,6 +53,14 @@ export default function Navbar({ profile }: NavbarProps) {
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
+  // Institution / Workspace state
+  const [institution, setInstitution] = useState<any>(profile?.institution || null);
+  const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
+  const [workspaceNameInput, setWorkspaceNameInput] = useState('');
+  const [workspaceCodeInput, setWorkspaceCodeInput] = useState('');
+  const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [isSubmittingWorkspace, setIsSubmittingWorkspace] = useState(false);
+
   useEffect(() => {
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
@@ -51,6 +69,16 @@ export default function Navbar({ profile }: NavbarProps) {
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, []);
+
+  useEffect(() => {
+    async function loadInst() {
+      const res = await getInstitutionDetailsAction();
+      if (res.success && res.institution) {
+        setInstitution(res.institution);
+      }
+    }
+    loadInst();
+  }, [profile?.institutionId]);
 
   const handleInstallPWA = async () => {
     if (deferredPrompt) {
@@ -65,6 +93,42 @@ export default function Navbar({ profile }: NavbarProps) {
         "To Install App:\n- Android Chrome: Tap 3 dots menu -> 'Install App'\n- iPhone Safari: Tap Share button -> 'Add to Home Screen'",
         { duration: 6000 }
       );
+    }
+  };
+
+  const handleCreateWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!workspaceNameInput.trim() || !workspaceCodeInput.trim()) {
+      toast.error('Please enter institution name and join code.');
+      return;
+    }
+    setIsSubmittingWorkspace(true);
+    const res = await createInstitutionAction(workspaceNameInput, workspaceCodeInput);
+    setIsSubmittingWorkspace(false);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to create institution workspace.');
+    } else {
+      toast.success(`Workspace "${res.institution?.name}" created successfully!`);
+      setShowWorkspaceModal(false);
+      window.location.reload();
+    }
+  };
+
+  const handleJoinWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinCodeInput.trim()) {
+      toast.error('Please enter institution join code.');
+      return;
+    }
+    setIsSubmittingWorkspace(true);
+    const res = await joinInstitutionByCodeAction(joinCodeInput);
+    setIsSubmittingWorkspace(false);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to join institution workspace.');
+    } else {
+      toast.success(`Joined ${res.institution?.name}! Awaiting teacher approval.`);
+      setShowWorkspaceModal(false);
+      window.location.reload();
     }
   };
 
@@ -143,6 +207,39 @@ export default function Navbar({ profile }: NavbarProps) {
           <div className="flex items-center space-x-2 sm:space-x-3">
             {/* DESKTOP-ONLY ACTIONS */}
             <div className="hidden md:flex items-center space-x-2">
+              {/* Institution / Workspace Badge or Join Button */}
+              {institution ? (
+                <div
+                  onClick={() => isTeacher && setShowWorkspaceModal(true)}
+                  className="px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 rounded-lg flex items-center gap-1.5 cursor-pointer hover:bg-indigo-500/20 transition-all"
+                  title={isTeacher ? 'Click to manage workspace code' : 'Active Institution'}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                  <span className="font-bold max-w-[120px] truncate">{institution.name}</span>
+                  {institution.code && (
+                    <span className="font-mono text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-bold">
+                      {institution.code}
+                    </span>
+                  )}
+                </div>
+              ) : isTeacher ? (
+                <button
+                  onClick={() => setShowWorkspaceModal(true)}
+                  className="px-2.5 py-1.5 text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create Workspace</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowWorkspaceModal(true)}
+                  className="px-2.5 py-1.5 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Join Workspace</span>
+                </button>
+              )}
+
               <button
                 onClick={handleInstallPWA}
                 className="px-2.5 py-1.5 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold border border-indigo-500/30"
@@ -173,8 +270,11 @@ export default function Navbar({ profile }: NavbarProps) {
               {isLoaded && user && (
                 <div className="flex flex-col items-end text-xs">
                   <span className="font-semibold text-theme-main max-w-[130px] truncate">{displayName}</span>
-                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">
+                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-medium flex items-center gap-1">
                     {role} {role === 'STUDENT' && profile ? `• ${profile.points} pts` : ''}
+                    {profile?.status === 'PENDING' && (
+                      <span className="bg-amber-500/20 text-amber-500 text-[9px] font-bold px-1 rounded">PENDING</span>
+                    )}
                   </span>
                 </div>
               )}
@@ -208,6 +308,17 @@ export default function Navbar({ profile }: NavbarProps) {
           </div>
         </div>
       </header>
+
+      {/* PENDING APPROVAL NOTICE BANNER (FOR STUDENTS PENDING APPROVAL) */}
+      {!isTeacher && profile?.status === 'PENDING' && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-600 dark:text-amber-400 px-4 py-2.5 text-xs text-center font-medium flex items-center justify-center gap-2 shadow-inner">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+          <span>
+            <strong>Access Pending Approval:</strong> Your request to join{' '}
+            <strong>{institution?.name || 'Workspace'}</strong> is awaiting teacher verification. Content will unlock once approved.
+          </span>
+        </div>
+      )}
 
       {/* MOBILE FULL NAVIGATION & PROFILE DRAWER MODAL */}
       {profileDrawerOpen && (
@@ -396,6 +507,136 @@ export default function Navbar({ profile }: NavbarProps) {
           <span className="truncate max-w-[56px] text-[10px] font-bold">More...</span>
         </button>
       </nav>
+
+      {/* INSTITUTION WORKSPACE MODAL */}
+      {showWorkspaceModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-theme-card border border-theme rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-theme pb-4">
+              <div className="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400">
+                <Building2 className="w-6 h-6" />
+                <h3 className="text-lg font-bold text-theme-main">
+                  {isTeacher ? 'Institution Workspace' : 'Join Institution Workspace'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowWorkspaceModal(false)}
+                className="p-1 rounded-lg text-theme-sub hover:bg-slate-200 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {isTeacher ? (
+              <div>
+                {institution ? (
+                  <div className="space-y-4">
+                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                        Active Workspace
+                      </p>
+                      <h4 className="text-xl font-bold text-theme-main">{institution.name}</h4>
+                      <div className="flex items-center space-x-2 pt-1">
+                        <span className="text-xs text-theme-sub">Share Student Join Code:</span>
+                        <span className="font-mono text-sm font-bold bg-indigo-600 text-white px-2 py-0.5 rounded">
+                          {institution.code}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-theme-sub">
+                      Students must enter this code when signing up to access your courses, quizzes, and homework.
+                    </p>
+
+                    <button
+                      onClick={() => setShowWorkspaceModal(false)}
+                      className="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors text-sm"
+                    >
+                      Close Window
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleCreateWorkspace} className="space-y-4">
+                    <p className="text-xs text-theme-sub">
+                      Create an isolated LMS workspace for your college, institute, or tuition center. Students will join using your unique workspace code.
+                    </p>
+
+                    <div>
+                      <label className="block text-xs font-bold text-theme-main mb-1">
+                        Institution / Academy Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={workspaceNameInput}
+                        onChange={(e) => setWorkspaceNameInput(e.target.value)}
+                        placeholder="e.g. Acme Academy"
+                        className="w-full px-3 py-2 text-sm rounded-xl border border-theme bg-theme-input text-theme-main focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-theme-main mb-1">
+                        Unique Join Code for Students
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={workspaceCodeInput}
+                        onChange={(e) => setWorkspaceCodeInput(e.target.value.toUpperCase())}
+                        placeholder="e.g. ACME101"
+                        className="w-full px-3 py-2 text-sm rounded-xl border border-theme bg-theme-input text-theme-main font-mono uppercase focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmittingWorkspace}
+                      className="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm disabled:opacity-50"
+                    >
+                      {isSubmittingWorkspace ? 'Creating Workspace...' : 'Create Institution Workspace'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleJoinWorkspace} className="space-y-4">
+                <p className="text-xs text-theme-sub">
+                  Enter the unique workspace code provided by your teacher or institution to access your specific courses and quizzes.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-bold text-theme-main mb-1">
+                    Institution Join Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={joinCodeInput}
+                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                    placeholder="e.g. ACME101"
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-theme bg-theme-input text-theme-main font-mono uppercase focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {institution && (
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/30">
+                    Currently joined: <strong>{institution.name}</strong> ({profile?.status || 'APPROVED'})
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingWorkspace}
+                  className="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors text-sm disabled:opacity-50"
+                >
+                  {isSubmittingWorkspace ? 'Joining Workspace...' : 'Join Workspace'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
