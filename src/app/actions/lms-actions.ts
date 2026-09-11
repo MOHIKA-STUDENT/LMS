@@ -202,21 +202,16 @@ export async function joinBatchByCodeAction(joinCode: string) {
 export async function getRosterAction() {
   try {
     const user = await currentUser();
-    let whereClause: any = undefined;
+    if (!user) return { success: false, error: 'Unauthorized.' };
 
-    if (user) {
-      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
-      if (profile?.role === 'TEACHER') {
-        // Teacher ONLY sees students in their own batches OR unassigned students
-        whereClause = {
-          role: 'STUDENT',
-          OR: [
-            { batch: { teacherId: user.id } },
-            { batchId: null },
-            { batch: { teacherId: null } },
-          ],
-        };
-      }
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    let whereClause: any = { role: 'STUDENT' };
+
+    if (profile?.role === 'TEACHER') {
+      whereClause = {
+        role: 'STUDENT',
+        batch: { teacherId: user.id },
+      };
     }
 
     const profiles = await prisma.profile.findMany({
@@ -308,14 +303,9 @@ export async function getMaterialsAction(batchId?: string) {
           ],
         };
       } else if (targetBatchId) {
-        whereClause = {
-          OR: [
-            { batchId: targetBatchId },
-            { isGlobal: true, teacherId: null },
-          ],
-        };
+        whereClause = { batchId: targetBatchId };
       } else {
-        whereClause = { isGlobal: true, teacherId: null };
+        return { success: true, materials: [] };
       }
     }
 
@@ -546,14 +536,9 @@ export async function getQuizzesAction(batchId?: string) {
           ],
         };
       } else if (targetBatchId) {
-        whereClause = {
-          OR: [
-            { batchId: targetBatchId },
-            { isGlobal: true, teacherId: null },
-          ],
-        };
+        whereClause = { batchId: targetBatchId };
       } else {
-        whereClause = { isGlobal: true, teacherId: null };
+        return { success: true, quizzes: [] };
       }
     }
 
@@ -983,14 +968,9 @@ export async function getRecordedSessionsAction(batchId?: string) {
           ],
         };
       } else if (targetBatchId) {
-        whereClause = {
-          OR: [
-            { batchId: targetBatchId },
-            { isGlobal: true, teacherId: null },
-          ],
-        };
+        whereClause = { batchId: targetBatchId };
       } else {
-        whereClause = { isGlobal: true, teacherId: null };
+        return { success: true, sessions: [] };
       }
     }
 
@@ -1048,8 +1028,30 @@ export async function logVideoWatchProgressAction(
 // ==========================================
 export async function getAssignmentsAction(batchId?: string) {
   try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    if (profile && profile.isActive === false) {
+      return { success: false, error: 'Access revoked. Your account is inactive.' };
+    }
+
+    let whereClause: any = {};
+
+    if (profile?.role === 'TEACHER') {
+      whereClause = batchId && batchId !== 'ALL'
+        ? { batchId, batch: { teacherId: user.id } }
+        : { batch: { teacherId: user.id } };
+    } else {
+      const targetBatchId = batchId || profile?.batchId;
+      if (!targetBatchId) {
+        return { success: true, assignments: [] };
+      }
+      whereClause = { batchId: targetBatchId };
+    }
+
     const assignments = await prisma.assignment.findMany({
-      where: batchId && batchId !== 'ALL' ? { batchId } : undefined,
+      where: whereClause,
       include: {
         batch: true,
         submissions: {
