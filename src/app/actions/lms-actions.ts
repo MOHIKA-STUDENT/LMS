@@ -202,6 +202,122 @@ export async function verifyTeacherPasswordAction(password: string) {
   }
 }
 
+export async function updateInstitutionAction(data: {
+  name: string;
+  code: string;
+  passwordConfirm: string;
+}) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const teacherProfile = await prisma.profile.findUnique({
+      where: { id: user.id },
+    });
+
+    if (!teacherProfile || teacherProfile.role !== 'TEACHER' || !teacherProfile.institutionId) {
+      return { success: false, error: 'Only institution teachers can update workspace details.' };
+    }
+
+    const pwdRes = await verifyTeacherPasswordAction(data.passwordConfirm);
+    if (!pwdRes.success) {
+      return { success: false, error: pwdRes.error || 'Password verification failed. Access denied.' };
+    }
+
+    if (!data.name || data.name.trim().length < 2) {
+      return { success: false, error: 'Institution name must be at least 2 characters.' };
+    }
+
+    const cleanCode = data.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+    if (!cleanCode || cleanCode.length < 3) {
+      return { success: false, error: 'Workspace Join Code must be at least 3 alphanumeric characters.' };
+    }
+
+    const existing = await prisma.institution.findFirst({
+      where: {
+        code: cleanCode,
+        NOT: { id: teacherProfile.institutionId },
+      },
+    });
+
+    if (existing) {
+      return { success: false, error: `Workspace Join Code '${cleanCode}' is already registered by another institution.` };
+    }
+
+    const updatedInst = await prisma.institution.update({
+      where: { id: teacherProfile.institutionId },
+      data: {
+        name: data.name.trim(),
+        code: cleanCode,
+      },
+    });
+
+    return { success: true, institution: updatedInst };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update institution workspace.' };
+  }
+}
+
+export async function deleteInstitutionAction(passwordConfirm: string) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const teacherProfile = await prisma.profile.findUnique({
+      where: { id: user.id },
+    });
+
+    if (!teacherProfile || teacherProfile.role !== 'TEACHER' || !teacherProfile.institutionId) {
+      return { success: false, error: 'Only institution teachers can delete the workspace.' };
+    }
+
+    const pwdRes = await verifyTeacherPasswordAction(passwordConfirm);
+    if (!pwdRes.success) {
+      return { success: false, error: pwdRes.error || 'Password verification failed. Access denied.' };
+    }
+
+    const instId = teacherProfile.institutionId;
+
+    await prisma.profile.updateMany({
+      where: { institutionId: instId },
+      data: { institutionId: null, status: 'APPROVED' },
+    });
+
+    await prisma.batch.updateMany({
+      where: { institutionId: instId },
+      data: { institutionId: null },
+    });
+
+    await prisma.courseMaterial.updateMany({
+      where: { institutionId: instId },
+      data: { institutionId: null },
+    });
+
+    await prisma.assignment.updateMany({
+      where: { institutionId: instId },
+      data: { institutionId: null },
+    });
+
+    await prisma.quiz.updateMany({
+      where: { institutionId: instId },
+      data: { institutionId: null },
+    });
+
+    await prisma.recordedSession.updateMany({
+      where: { institutionId: instId },
+      data: { institutionId: null },
+    });
+
+    await prisma.institution.delete({
+      where: { id: instId },
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to delete institution workspace.' };
+  }
+}
+
 // ==========================================
 // BATCH ACTIONS
 // ==========================================

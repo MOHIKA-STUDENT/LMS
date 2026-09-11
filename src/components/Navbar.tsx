@@ -12,6 +12,8 @@ import {
   joinInstitutionByCodeAction,
   getInstitutionDetailsAction,
   verifyTeacherPasswordAction,
+  updateInstitutionAction,
+  deleteInstitutionAction,
 } from '@/app/actions/lms-actions';
 import {
   BookOpen,
@@ -43,6 +45,8 @@ import {
   Copy,
   Check,
   ShieldAlert,
+  Edit3,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -72,6 +76,17 @@ export default function Navbar({ profile }: NavbarProps) {
   const [showPasswordAuthModal, setShowPasswordAuthModal] = useState(false);
   const [teacherAuthPassword, setTeacherAuthPassword] = useState('');
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
+
+  // Workspace Edit & Delete State
+  const [isEditingWorkspace, setIsEditingWorkspace] = useState(false);
+  const [editInstName, setEditInstName] = useState('');
+  const [editInstCode, setEditInstCode] = useState('');
+  const [editPasswordAuth, setEditPasswordAuth] = useState('');
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  const [showDeleteWorkspaceModal, setShowDeleteWorkspaceModal] = useState(false);
+  const [deletePasswordAuth, setDeletePasswordAuth] = useState('');
+  const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstall = (e: Event) => {
@@ -184,6 +199,64 @@ export default function Navbar({ profile }: NavbarProps) {
       toast.error(res.error || 'Failed to join institution workspace.');
     } else {
       toast.success(`Joined ${res.institution?.name}! Awaiting teacher approval.`);
+      setShowWorkspaceModal(false);
+      window.location.reload();
+    }
+  };
+
+  const handleOpenEditWorkspace = () => {
+    if (institution) {
+      setEditInstName(institution.name);
+      setEditInstCode(institution.code);
+      setEditPasswordAuth('');
+      setIsEditingWorkspace(true);
+    }
+  };
+
+  const handleUpdateWorkspaceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editInstName.trim() || !editInstCode.trim()) {
+      toast.error('Please enter institution name and join code.');
+      return;
+    }
+    if (!editPasswordAuth.trim()) {
+      toast.error('Password is required to confirm workspace updates.');
+      return;
+    }
+
+    setIsSubmittingEdit(true);
+    const res = await updateInstitutionAction({
+      name: editInstName,
+      code: editInstCode,
+      passwordConfirm: editPasswordAuth,
+    });
+    setIsSubmittingEdit(false);
+
+    if (!res.success) {
+      toast.error(res.error || 'Failed to update workspace.');
+    } else {
+      toast.success('Institution Workspace updated successfully!');
+      setIsEditingWorkspace(false);
+      window.location.reload();
+    }
+  };
+
+  const handleDeleteWorkspaceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deletePasswordAuth.trim()) {
+      toast.error('Please enter your account password to confirm deletion.');
+      return;
+    }
+
+    setIsSubmittingDelete(true);
+    const res = await deleteInstitutionAction(deletePasswordAuth);
+    setIsSubmittingDelete(false);
+
+    if (!res.success) {
+      toast.error(res.error || 'Failed to delete workspace.');
+    } else {
+      toast.success('Institution Workspace permanently deleted.');
+      setShowDeleteWorkspaceModal(false);
       setShowWorkspaceModal(false);
       window.location.reload();
     }
@@ -588,58 +661,149 @@ export default function Navbar({ profile }: NavbarProps) {
               <div>
                 {institution ? (
                   <div className="space-y-4">
-                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                          Active Workspace
-                        </p>
-                        <Lock className="w-3.5 h-3.5 text-indigo-400" />
-                      </div>
-                      <h4 className="text-xl font-bold text-theme-main">{institution.name}</h4>
+                    {isEditingWorkspace ? (
+                      <form onSubmit={handleUpdateWorkspaceSubmit} className="space-y-4">
+                        <div className="bg-indigo-500/10 border border-indigo-500/30 p-3 rounded-xl">
+                          <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400">Edit Institution Workspace</h4>
+                          <p className="text-[11px] text-theme-sub mt-0.5">Update institution name or edit student join code</p>
+                        </div>
 
-                      {/* SECURE JOIN CODE BOX (PROTECTED BY PASSWORD AUTH GATE) */}
-                      <div className="bg-theme-card p-3 rounded-lg border border-theme space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-theme-sub font-medium">Private Join Code:</span>
-                          <div className="flex items-center space-x-1">
-                            <button
-                              type="button"
-                              onClick={handleToggleRevealCode}
-                              className="p-1 text-theme-sub hover:text-theme-main rounded transition-colors flex items-center space-x-1 text-xs font-semibold"
-                              title={revealCode ? 'Hide Join Code' : 'Password required to reveal code'}
-                            >
-                              {revealCode ? <EyeOff className="w-4 h-4 text-indigo-500" /> : <Eye className="w-4 h-4 text-indigo-500" />}
-                              <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
-                                {revealCode ? 'Hide' : 'Reveal'}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyCode(institution.code)}
-                              className="px-2 py-1 bg-indigo-600 text-white text-xs font-bold rounded flex items-center space-x-1 hover:bg-indigo-700 transition-colors"
-                            >
-                              {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                              <span>{copiedCode ? 'Copied' : 'Copy'}</span>
-                            </button>
+                        <div>
+                          <label className="block text-xs font-bold text-theme-main mb-1">
+                            Institution / Academy Name
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={editInstName}
+                            onChange={(e) => setEditInstName(e.target.value)}
+                            placeholder="e.g. Acme Academy"
+                            className="w-full px-3 py-2 text-sm rounded-xl border border-theme bg-theme-input text-theme-main focus:outline-none focus:border-indigo-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-theme-main mb-1">
+                            New Private Join Code
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={editInstCode}
+                            onChange={(e) => setEditInstCode(e.target.value.toUpperCase())}
+                            placeholder="e.g. ACME101"
+                            className="w-full px-3 py-2 text-sm rounded-xl border border-theme bg-theme-input text-theme-main font-mono uppercase focus:outline-none focus:border-indigo-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-theme-main mb-1">
+                            Account Password / Verification Email
+                          </label>
+                          <input
+                            type="password"
+                            required
+                            value={editPasswordAuth}
+                            onChange={(e) => setEditPasswordAuth(e.target.value)}
+                            placeholder="Enter password to confirm changes"
+                            className="w-full px-3 py-2 text-sm rounded-xl border border-theme bg-theme-input text-theme-main focus:outline-none focus:border-indigo-500"
+                          />
+                        </div>
+
+                        <div className="flex items-center space-x-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingWorkspace(false)}
+                            className="flex-1 py-2 bg-slate-200 dark:bg-slate-800 text-theme-main text-xs font-bold rounded-xl hover:opacity-80 transition-opacity"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isSubmittingEdit}
+                            className="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                          >
+                            {isSubmittingEdit ? 'Saving...' : 'Save & Update'}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-xl space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                              Active Workspace
+                            </p>
+                            <Lock className="w-3.5 h-3.5 text-indigo-400" />
+                          </div>
+                          <h4 className="text-xl font-bold text-theme-main">{institution.name}</h4>
+
+                          {/* SECURE JOIN CODE BOX (PROTECTED BY PASSWORD AUTH GATE) */}
+                          <div className="bg-theme-card p-3 rounded-lg border border-theme space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-theme-sub font-medium">Private Join Code:</span>
+                              <div className="flex items-center space-x-1">
+                                <button
+                                  type="button"
+                                  onClick={handleToggleRevealCode}
+                                  className="p-1 text-theme-sub hover:text-theme-main rounded transition-colors flex items-center space-x-1 text-xs font-semibold"
+                                  title={revealCode ? 'Hide Join Code' : 'Password required to reveal code'}
+                                >
+                                  {revealCode ? <EyeOff className="w-4 h-4 text-indigo-500" /> : <Eye className="w-4 h-4 text-indigo-500" />}
+                                  <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                                    {revealCode ? 'Hide' : 'Reveal'}
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyCode(institution.code)}
+                                  className="px-2 py-1 bg-indigo-600 text-white text-xs font-bold rounded flex items-center space-x-1 hover:bg-indigo-700 transition-colors"
+                                >
+                                  {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                  <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="font-mono text-center text-lg font-bold tracking-widest text-indigo-600 dark:text-indigo-300 py-1.5 bg-indigo-500/5 rounded border border-indigo-500/20">
+                              {revealCode ? institution.code : '••••••••'}
+                            </div>
                           </div>
                         </div>
 
-                        <div className="font-mono text-center text-lg font-bold tracking-widest text-indigo-600 dark:text-indigo-300 py-1.5 bg-indigo-500/5 rounded border border-indigo-500/20">
-                          {revealCode ? institution.code : '••••••••'}
+                        <p className="text-xs text-theme-sub">
+                          Share this private Join Code with your students. Newly registered students will enter this code to request access to your courses and quizzes.
+                        </p>
+
+                        <div className="flex items-center space-x-2 pt-2 border-t border-theme">
+                          <button
+                            type="button"
+                            onClick={handleOpenEditWorkspace}
+                            className="flex-1 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs font-bold rounded-xl border border-indigo-500/30 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit Workspace & Code</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowDeleteWorkspaceModal(true)}
+                            className="py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-500/30 transition-colors flex items-center justify-center gap-1"
+                            title="Delete Institution Workspace"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
                         </div>
-                      </div>
-                    </div>
 
-                    <p className="text-xs text-theme-sub">
-                      Share this private Join Code with your students. Newly registered students will enter this code to request access to your courses and quizzes.
-                    </p>
-
-                    <button
-                      onClick={() => setShowWorkspaceModal(false)}
-                      className="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors text-sm"
-                    >
-                      Close Window
-                    </button>
+                        <button
+                          onClick={() => setShowWorkspaceModal(false)}
+                          className="w-full py-2 bg-slate-200 dark:bg-slate-800 text-theme-main font-bold rounded-xl hover:opacity-90 transition-opacity text-xs"
+                        >
+                          Close Window
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <form onSubmit={handleCreateWorkspace} className="space-y-4">
@@ -779,6 +943,65 @@ export default function Navbar({ profile }: NavbarProps) {
                   className="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
                 >
                   {isVerifyingPassword ? 'Verifying...' : 'Verify & Reveal Code'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE WORKSPACE CONFIRMATION SECURITY MODAL */}
+      {showDeleteWorkspaceModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-theme-card border border-red-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center space-x-3 text-red-600 dark:text-red-400 border-b border-theme pb-3">
+              <div className="p-2 bg-red-500/10 rounded-xl">
+                <Trash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-theme-main">Delete Institution Workspace</h3>
+                <p className="text-[11px] text-red-500 font-semibold">Irreversible Administrative Action</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleDeleteWorkspaceSubmit} className="space-y-4 pt-1">
+              <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-xs text-red-600 dark:text-red-300">
+                Warning: Deleting <strong>"{institution?.name}"</strong> will dissolve the workspace and reset student workspace scopes. Enter your account password to authorize deletion.
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-theme-main mb-1">
+                  Account Password / Verification Email
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  value={deletePasswordAuth}
+                  onChange={(e) => setDeletePasswordAuth(e.target.value)}
+                  placeholder="Enter your account password to confirm deletion"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-theme bg-theme-input text-theme-main focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteWorkspaceModal(false);
+                    setDeletePasswordAuth('');
+                  }}
+                  className="flex-1 py-2 bg-slate-200 dark:bg-slate-800 text-theme-main text-xs font-bold rounded-xl hover:opacity-80 transition-opacity"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingDelete}
+                  className="flex-1 py-2 bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {isSubmittingDelete ? 'Deleting...' : 'Confirm & Delete'}
                 </button>
               </div>
             </form>
