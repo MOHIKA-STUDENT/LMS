@@ -53,21 +53,22 @@ model Batch {
   zoomLink     String?
   createdAt    DateTime  @default(now())
 
-  profiles         Profile[]
-  courseMaterials  CourseMaterial[]
-  assignments      Assignment[]
-  quizzes          Quiz[]
+  profiles          Profile[]
+  courseMaterials   CourseMaterial[]
+  assignments       Assignment[]
+  quizzes           Quiz[]
   attendanceRecords AttendanceRecord[]
-  feeRecords       FeeRecord[]
-  recordedSessions RecordedSession[]
+  feeRecords        FeeRecord[]
+  recordedSessions  RecordedSession[]
 
   @@map("batches")
 }
 
 model CourseMaterial {
   id            String   @id @default(uuid())
+  teacherId     String?  // Scoped to Teacher / Institution owner
   batchId       String?
-  isGlobal      Boolean  @default(false) // Target all batches if true
+  isGlobal      Boolean  @default(false) // Target all batches of this teacher if true
   title         String
   description   String?
   fileUrl       String
@@ -113,8 +114,9 @@ model HomeworkSubmission {
 
 model Quiz {
   id        String    @id @default(uuid())
+  teacherId String?   // Scoped to Teacher / Institution owner
   batchId   String?
-  isGlobal  Boolean   @default(false) // Target all batches if true
+  isGlobal  Boolean   @default(false) // Target all batches of this teacher if true
   title     String
   cefrLevel CEFRLevel
   topic     String
@@ -177,6 +179,7 @@ model FeeRecord {
 
 model RecordedSession {
   id              String   @id @default(uuid())
+  teacherId       String?  // Scoped to Teacher / Institution owner
   batchId         String?
   isGlobal        Boolean  @default(false)
   title           String

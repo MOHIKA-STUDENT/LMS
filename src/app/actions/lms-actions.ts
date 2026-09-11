@@ -271,22 +271,56 @@ export async function deleteStudentAction(studentId: string) {
 export async function getMaterialsAction(batchId?: string) {
   try {
     const user = await currentUser();
-    if (user) {
-      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
-      if (profile && profile.isActive === false) {
-        return { success: false, error: 'Access revoked. Your account is inactive.' };
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    if (profile && profile.isActive === false) {
+      return { success: false, error: 'Access revoked. Your account is inactive.' };
+    }
+
+    let whereClause: any = {};
+
+    if (profile?.role === 'TEACHER') {
+      whereClause = {
+        OR: [
+          { teacherId: user.id },
+          { batch: { teacherId: user.id } },
+          { teacherId: null, batchId: null },
+        ],
+      };
+    } else {
+      let targetTeacherId: string | null = null;
+      let targetBatchId: string | null = batchId || profile?.batchId || null;
+
+      if (targetBatchId) {
+        const studentBatch = await prisma.batch.findUnique({ where: { id: targetBatchId } });
+        if (studentBatch?.teacherId) {
+          targetTeacherId = studentBatch.teacherId;
+        }
+      }
+
+      if (targetBatchId && targetTeacherId) {
+        whereClause = {
+          OR: [
+            { batchId: targetBatchId },
+            { teacherId: targetTeacherId, isGlobal: true },
+            { batch: { teacherId: targetTeacherId }, isGlobal: true },
+          ],
+        };
+      } else if (targetBatchId) {
+        whereClause = {
+          OR: [
+            { batchId: targetBatchId },
+            { isGlobal: true, teacherId: null },
+          ],
+        };
+      } else {
+        whereClause = { isGlobal: true, teacherId: null };
       }
     }
 
     const materials = await prisma.courseMaterial.findMany({
-      where: batchId
-        ? {
-            OR: [
-              { batchId },
-              { isGlobal: true },
-            ],
-          }
-        : undefined,
+      where: whereClause,
       include: { batch: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -304,6 +338,9 @@ export async function getMaterialsAction(batchId?: string) {
 
 export async function uploadMaterialAction(formData: FormData) {
   try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
     const batchId = formData.get('batchId') as string;
     const isGlobal = formData.get('isGlobal') === 'true';
     const title = formData.get('title') as string;
@@ -314,7 +351,7 @@ export async function uploadMaterialAction(formData: FormData) {
       return { success: false, error: 'Missing required fields.' };
     }
 
-    const targetFolder = isGlobal ? 'materials/global' : `materials/${batchId}`;
+    const targetFolder = isGlobal ? `materials/${user.id}/global` : `materials/${user.id}/${batchId}`;
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const { uploadToCloudinary } = await import('@/lib/storage/cloudinary');
     const uploadResult = await uploadToCloudinary(fileBuffer, file.name, targetFolder);
@@ -325,6 +362,7 @@ export async function uploadMaterialAction(formData: FormData) {
 
     const material = await prisma.courseMaterial.create({
       data: {
+        teacherId: user.id,
         batchId: isGlobal ? null : batchId,
         isGlobal,
         title,
@@ -471,22 +509,56 @@ export async function getLeaderboardAction() {
 export async function getQuizzesAction(batchId?: string) {
   try {
     const user = await currentUser();
-    if (user) {
-      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
-      if (profile && profile.isActive === false) {
-        return { success: false, error: 'Access revoked. Your account is inactive.' };
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    if (profile && profile.isActive === false) {
+      return { success: false, error: 'Access revoked. Your account is inactive.' };
+    }
+
+    let whereClause: any = {};
+
+    if (profile?.role === 'TEACHER') {
+      whereClause = {
+        OR: [
+          { teacherId: user.id },
+          { batch: { teacherId: user.id } },
+          { teacherId: null, batchId: null },
+        ],
+      };
+    } else {
+      let targetTeacherId: string | null = null;
+      let targetBatchId: string | null = batchId || profile?.batchId || null;
+
+      if (targetBatchId) {
+        const studentBatch = await prisma.batch.findUnique({ where: { id: targetBatchId } });
+        if (studentBatch?.teacherId) {
+          targetTeacherId = studentBatch.teacherId;
+        }
+      }
+
+      if (targetBatchId && targetTeacherId) {
+        whereClause = {
+          OR: [
+            { batchId: targetBatchId },
+            { teacherId: targetTeacherId, isGlobal: true },
+            { batch: { teacherId: targetTeacherId }, isGlobal: true },
+          ],
+        };
+      } else if (targetBatchId) {
+        whereClause = {
+          OR: [
+            { batchId: targetBatchId },
+            { isGlobal: true, teacherId: null },
+          ],
+        };
+      } else {
+        whereClause = { isGlobal: true, teacherId: null };
       }
     }
 
     const quizzes = await prisma.quiz.findMany({
-      where: batchId
-        ? {
-            OR: [
-              { batchId },
-              { isGlobal: true },
-            ],
-          }
-        : undefined,
+      where: whereClause,
       include: { batch: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -510,6 +582,7 @@ export async function createManualQuizAction(data: {
 
     const quiz = await prisma.quiz.create({
       data: {
+        teacherId: user.id,
         batchId: data.isGlobal ? null : (data.batchId || null),
         isGlobal: !!data.isGlobal,
         title: data.title,
@@ -812,8 +885,12 @@ export async function createRecordedSessionAction(data: {
   durationSeconds?: number;
 }) {
   try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
     const session = await prisma.recordedSession.create({
       data: {
+        teacherId: user.id,
         batchId: data.isGlobal ? null : (data.batchId || null),
         isGlobal: !!data.isGlobal,
         title: data.title,
@@ -869,22 +946,56 @@ export async function deleteRecordedSessionAction(id: string) {
 export async function getRecordedSessionsAction(batchId?: string) {
   try {
     const user = await currentUser();
-    if (user) {
-      const profile = await prisma.profile.findUnique({ where: { id: user.id } });
-      if (profile && profile.isActive === false) {
-        return { success: false, error: 'Access revoked. Your account is inactive.' };
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+    if (profile && profile.isActive === false) {
+      return { success: false, error: 'Access revoked. Your account is inactive.' };
+    }
+
+    let whereClause: any = {};
+
+    if (profile?.role === 'TEACHER') {
+      whereClause = {
+        OR: [
+          { teacherId: user.id },
+          { batch: { teacherId: user.id } },
+          { teacherId: null, batchId: null },
+        ],
+      };
+    } else {
+      let targetTeacherId: string | null = null;
+      let targetBatchId: string | null = batchId || profile?.batchId || null;
+
+      if (targetBatchId) {
+        const studentBatch = await prisma.batch.findUnique({ where: { id: targetBatchId } });
+        if (studentBatch?.teacherId) {
+          targetTeacherId = studentBatch.teacherId;
+        }
+      }
+
+      if (targetBatchId && targetTeacherId) {
+        whereClause = {
+          OR: [
+            { batchId: targetBatchId },
+            { teacherId: targetTeacherId, isGlobal: true },
+            { batch: { teacherId: targetTeacherId }, isGlobal: true },
+          ],
+        };
+      } else if (targetBatchId) {
+        whereClause = {
+          OR: [
+            { batchId: targetBatchId },
+            { isGlobal: true, teacherId: null },
+          ],
+        };
+      } else {
+        whereClause = { isGlobal: true, teacherId: null };
       }
     }
 
     const sessions = await prisma.recordedSession.findMany({
-      where: batchId
-        ? {
-            OR: [
-              { batchId },
-              { isGlobal: true },
-            ],
-          }
-        : undefined,
+      where: whereClause,
       include: {
         batch: true,
         watchLogs: { include: { student: true } },
