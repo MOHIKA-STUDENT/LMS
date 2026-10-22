@@ -1,3 +1,4 @@
+import '@/lib/polyfills';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
@@ -10,6 +11,9 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const viewport: Viewport = {
   themeColor: '#4f46e5',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export const metadata: Metadata = {
@@ -40,7 +44,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className="dark">
-        <body className={`${inter.className} min-h-screen bg-theme-main text-theme-main antialiased transition-colors duration-200`}>
+        <body className={`${inter.className} min-h-screen overflow-x-hidden bg-theme-main text-theme-main antialiased transition-colors duration-200`}>
           <ThemeProvider>
             <ServiceWorkerRegister />
             {children}
