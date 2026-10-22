@@ -1,10 +1,21 @@
 'use client';
 
-import { SignIn } from '@clerk/nextjs';
+import { useState, useEffect } from 'react';
+import { SignIn, ClerkLoaded, ClerkLoading } from '@clerk/nextjs';
 import Link from 'next/link';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Loader2 } from 'lucide-react';
+import { AuthBrowserNotice } from '@/components/auth/AuthBrowserNotice';
+
+function ClerkLoadedDetector({ onLoaded }: { onLoaded: () => void }) {
+  useEffect(() => {
+    onLoaded();
+  }, [onLoaded]);
+  return null;
+}
 
 export default function LoginPage() {
+  const [isClerkLoaded, setIsClerkLoaded] = useState(false);
+
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 py-12">
       <div className="w-full max-w-md space-y-6 flex flex-col items-center">
@@ -16,21 +27,44 @@ export default function LoginPage() {
           <p className="text-sm text-slate-400 mt-1">Sign in with Clerk Auth</p>
         </div>
 
-        <SignIn
-          routing="hash"
-          appearance={{
-            elements: {
-              card: 'bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl',
-              headerTitle: 'text-white font-bold',
-              headerSubtitle: 'text-slate-400 text-xs',
-              socialButtonsBlockButton: 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700',
-              formFieldLabel: 'text-slate-300 text-xs font-semibold uppercase',
-              formFieldInput: 'bg-slate-800/80 border-slate-700 text-white rounded-xl text-sm focus:border-indigo-500',
-              formButtonPrimary: 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl',
-              footerActionLink: 'text-indigo-400 hover:text-indigo-300 font-semibold',
-            },
-          }}
-        />
+        {/* Mobile Browser / Fallback Guidance */}
+        <AuthBrowserNotice formType="login" isClerkLoaded={isClerkLoaded} />
+
+        <div className="w-full flex flex-col items-center">
+          <ClerkLoading>
+            <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center space-y-4 shadow-2xl min-h-[360px] animate-pulse">
+              <div className="p-3 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl text-indigo-400">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-sm font-semibold text-white">Loading Sign In Form</h3>
+                <p className="text-xs text-slate-400 max-w-xs">Initializing secure authentication session...</p>
+              </div>
+              <div className="w-48 h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full h-full bg-indigo-500/50 animate-pulse" />
+              </div>
+            </div>
+          </ClerkLoading>
+
+          <ClerkLoaded>
+            <ClerkLoadedDetector onLoaded={() => setIsClerkLoaded(true)} />
+            <SignIn
+              routing="hash"
+              appearance={{
+                elements: {
+                  card: 'bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl',
+                  headerTitle: 'text-white font-bold',
+                  headerSubtitle: 'text-slate-400 text-xs',
+                  socialButtonsBlockButton: 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700',
+                  formFieldLabel: 'text-slate-300 text-xs font-semibold uppercase',
+                  formFieldInput: 'bg-slate-800/80 border-slate-700 text-white rounded-xl text-sm focus:border-indigo-500',
+                  formButtonPrimary: 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl',
+                  footerActionLink: 'text-indigo-400 hover:text-indigo-300 font-semibold',
+                },
+              }}
+            />
+          </ClerkLoaded>
+        </div>
       </div>
     </div>
   );
