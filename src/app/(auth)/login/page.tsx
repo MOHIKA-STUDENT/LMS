@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SignIn, ClerkLoaded, ClerkLoading } from '@clerk/nextjs';
 import Link from 'next/link';
 import { BookOpen, Loader2 } from 'lucide-react';
@@ -9,12 +9,17 @@ import { AuthBrowserNotice } from '@/components/auth/AuthBrowserNotice';
 function ClerkLoadedDetector({ onLoaded }: { onLoaded: () => void }) {
   useEffect(() => {
     onLoaded();
-  }, [onLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return null;
 }
 
 export default function LoginPage() {
   const [isClerkLoaded, setIsClerkLoaded] = useState(false);
+
+  const handleLoaded = useCallback(() => {
+    setIsClerkLoaded(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 py-12">
@@ -47,7 +52,7 @@ export default function LoginPage() {
           </ClerkLoading>
 
           <ClerkLoaded>
-            <ClerkLoadedDetector onLoaded={() => setIsClerkLoaded(true)} />
+            <ClerkLoadedDetector onLoaded={handleLoaded} />
             <SignIn
               routing="hash"
               appearance={{

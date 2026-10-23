@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { SignUp, ClerkLoaded, ClerkLoading } from '@clerk/nextjs';
 import { BookOpen, Shield, Users, KeyRound, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,7 +9,8 @@ import { AuthBrowserNotice } from '@/components/auth/AuthBrowserNotice';
 function ClerkLoadedDetector({ onLoaded }: { onLoaded: () => void }) {
   useEffect(() => {
     onLoaded();
-  }, [onLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return null;
 }
 
@@ -18,6 +19,14 @@ export default function RegisterPage() {
   const [teacherPasscode, setTeacherPasscode] = useState('');
   const [passcodeVerified, setPasscodeVerified] = useState(false);
   const [isClerkLoaded, setIsClerkLoaded] = useState(false);
+
+  const handleLoaded = useCallback(() => {
+    setIsClerkLoaded(true);
+  }, []);
+
+  const unsafeMetadata = useMemo(() => ({
+    role,
+  }), [role]);
 
   const handleVerifyPasscode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,12 +129,10 @@ export default function RegisterPage() {
             </ClerkLoading>
 
             <ClerkLoaded>
-              <ClerkLoadedDetector onLoaded={() => setIsClerkLoaded(true)} />
+              <ClerkLoadedDetector onLoaded={handleLoaded} />
               <SignUp
                 routing="hash"
-                unsafeMetadata={{
-                  role: role,
-                }}
+                unsafeMetadata={unsafeMetadata}
                 appearance={{
                   elements: {
                     card: 'bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl',
