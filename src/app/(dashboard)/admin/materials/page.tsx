@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   getBatchesAction,
   getMaterialsAction,
@@ -10,24 +10,52 @@ import {
 } from '@/app/actions/lms-actions';
 import { processAndValidateFileUpload } from '@/lib/utils/asset-shield';
 import { formatCloudinaryFileUrl } from '@/lib/utils/url-helper';
-import { BookOpen, UploadCloud, FileText, Trash2, Download, Eye, Edit3, X } from 'lucide-react';
+import {
+  BookOpen,
+  UploadCloud,
+  FileText,
+  Trash2,
+  Download,
+  Eye,
+  Edit3,
+  X,
+  Folder,
+  FolderOpen,
+  ChevronDown,
+  ChevronRight,
+  Layers,
+  Search,
+  Filter,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MaterialsPage() {
   const [batches, setBatches] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
+  const [isGlobal, setIsGlobal] = useState(false);
+
+  // Form states
+  const [topic, setTopic] = useState('');
+  const [subtopic, setSubtopic] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // In-App Preview Modal
+  // Filter & Search states
+  const [filterBatch, setFilterBatch] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collapsedTopics, setCollapsedTopics] = useState<Record<string, boolean>>({});
+
+  // In-App Preview Modal State
   const [previewMaterial, setPreviewMaterial] = useState<any | null>(null);
 
   // Edit Material Modal State
   const [editingMaterial, setEditingMaterial] = useState<any | null>(null);
+  const [editTopic, setEditTopic] = useState('');
+  const [editSubtopic, setEditSubtopic] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editIsGlobal, setEditIsGlobal] = useState(false);
@@ -56,12 +84,49 @@ export default function MaterialsPage() {
     fetchData();
   }, []);
 
-  const [isGlobal, setIsGlobal] = useState(false);
+  // Collect unique existing topics for datalist suggestions
+  const existingTopics = useMemo(() => {
+    const set = new Set<string>();
+    materials.forEach((m) => {
+      if (m.topic && m.topic.trim()) set.add(m.topic.trim());
+    });
+    return Array.from(set);
+  }, [materials]);
+
+  // Collect unique subtopics for currently typed topic
+  const existingSubtopics = useMemo(() => {
+    const set = new Set<string>();
+    materials.forEach((m) => {
+      if (
+        topic &&
+        m.topic &&
+        m.topic.trim().toLowerCase() === topic.trim().toLowerCase() &&
+        m.subtopic &&
+        m.subtopic.trim()
+      ) {
+        set.add(m.subtopic.trim());
+      }
+    });
+    return Array.from(set);
+  }, [materials, topic]);
+
+  const toggleTopicCollapse = (topicName: string) => {
+    setCollapsedTopics((prev) => ({
+      ...prev,
+      [topicName]: !prev[topicName],
+    }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      toast.error('Please select a file to upload.');
+    if (selectedFiles.length === 0) {
+      toast.error('Please select at least one file to upload.');
       return;
     }
     if (!isGlobal && !selectedBatchId) {
@@ -72,30 +137,42 @@ export default function MaterialsPage() {
     setUploading(true);
 
     try {
-      const validation = await processAndValidateFileUpload(file);
-      if (!validation.valid || !validation.processedFile) {
-        toast.error(validation.error || 'File validation failed.');
-        setUploading(false);
-        return;
+      const validatedFiles: File[] = [];
+      for (const f of selectedFiles) {
+        const validation = await processAndValidateFileUpload(f);
+        if (!validation.valid || !validation.processedFile) {
+          toast.error(`File "${f.name}": ${validation.error || 'Validation failed.'}`);
+          setUploading(false);
+          return;
+        }
+        validatedFiles.push(validation.processedFile);
       }
-
-      const fileToUpload = validation.processedFile;
 
       const formData = new FormData();
       formData.append('batchId', isGlobal ? '' : selectedBatchId);
       formData.append('isGlobal', isGlobal ? 'true' : 'false');
-      formData.append('title', title);
-      formData.append('description', description);
-      formData.append('file', fileToUpload);
+      formData.append('topic', topic.trim() || 'General');
+      formData.append('subtopic', subtopic.trim());
+      formData.append('title', title.trim());
+      formData.append('description', description.trim());
+
+      for (const vf of validatedFiles) {
+        formData.append('files', vf);
+      }
 
       const res = await uploadMaterialAction(formData);
       if (!res.success) throw new Error(res.error);
 
-      toast.success('Course material uploaded successfully!');
+      toast.success(
+        `Successfully uploaded ${res.count || validatedFiles.length} file(s) under "${topic.trim() || 'General'}"!`
+      );
       setTitle('');
       setDescription('');
-      setFile(null);
-      setIsGlobal(false);
+      setSelectedFiles([]);
+      // Reset input element
+      const fileInput = document.getElementById('material-file-input') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
       fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Failed to upload material');
@@ -106,6 +183,8 @@ export default function MaterialsPage() {
 
   const handleEditOpen = (m: any) => {
     setEditingMaterial(m);
+    setEditTopic(m.topic || 'General');
+    setEditSubtopic(m.subtopic || '');
     setEditTitle(m.title || '');
     setEditDescription(m.description || '');
     setEditIsGlobal(!!m.isGlobal);
@@ -137,8 +216,10 @@ export default function MaterialsPage() {
 
       const formData = new FormData();
       formData.append('id', editingMaterial.id);
-      formData.append('title', editTitle);
-      formData.append('description', editDescription);
+      formData.append('topic', editTopic.trim() || 'General');
+      formData.append('subtopic', editSubtopic.trim());
+      formData.append('title', editTitle.trim());
+      formData.append('description', editDescription.trim());
       formData.append('isGlobal', editIsGlobal ? 'true' : 'false');
       formData.append('batchId', editIsGlobal ? '' : editBatchId);
       if (replacementFile) {
@@ -169,22 +250,91 @@ export default function MaterialsPage() {
     }
   };
 
+  // Group materials by Topic -> Subtopic
+  const groupedMaterials = useMemo(() => {
+    let filtered = materials;
+
+    // Filter by Batch
+    if (filterBatch !== 'ALL') {
+      if (filterBatch === 'GLOBAL') {
+        filtered = filtered.filter((m) => m.isGlobal);
+      } else {
+        filtered = filtered.filter((m) => m.batchId === filterBatch || m.isGlobal);
+      }
+    }
+
+    // Filter by Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (m) =>
+          m.title.toLowerCase().includes(q) ||
+          (m.topic && m.topic.toLowerCase().includes(q)) ||
+          (m.subtopic && m.subtopic.toLowerCase().includes(q)) ||
+          (m.description && m.description.toLowerCase().includes(q))
+      );
+    }
+
+    // Map by Topic -> { subtopics: { [subtopic]: items[] }, direct: items[] }
+    const topicMap: Record<
+      string,
+      {
+        subtopics: Record<string, any[]>;
+        direct: any[];
+        total: number;
+      }
+    > = {};
+
+    filtered.forEach((m) => {
+      const t = m.topic?.trim() || 'General';
+      if (!topicMap[t]) {
+        topicMap[t] = { subtopics: {}, direct: [], total: 0 };
+      }
+      topicMap[t].total += 1;
+
+      if (m.subtopic && m.subtopic.trim()) {
+        const sub = m.subtopic.trim();
+        if (!topicMap[t].subtopics[sub]) {
+          topicMap[t].subtopics[sub] = [];
+        }
+        topicMap[t].subtopics[sub].push(m);
+      } else {
+        topicMap[t].direct.push(m);
+      }
+    });
+
+    return topicMap;
+  }, [materials, filterBatch, searchQuery]);
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-theme-main flex items-center space-x-2">
           <BookOpen className="w-7 h-7 text-indigo-500" />
-          <span>Lesson Material Uploads</span>
+          <span>Lesson Materials & Topic Vault</span>
         </h1>
-        <p className="text-sm text-theme-sub mt-1">Upload PPT, PDF, and DOCX study guides filtered by target student batch (5MB max limit enforced)</p>
+        <p className="text-sm text-theme-sub mt-1">
+          Organize study guides by Main Topic (e.g., Unit / Module) and Subtopics. Upload multiple PDFs, PPTs, or DOCX documents (5MB max each).
+        </p>
       </div>
 
       {/* Uploader Form */}
-      <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-theme-main mb-4">Upload New Material</h2>
+      <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-theme pb-3">
+          <h2 className="text-lg font-bold text-theme-main flex items-center space-x-2">
+            <UploadCloud className="w-5 h-5 text-indigo-500" />
+            <span>Upload Materials (Topic Hierarchy)</span>
+          </h2>
+          <span className="text-xs px-2.5 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold rounded-full border border-indigo-500/20">
+            Multi-File Upload Supported
+          </span>
+        </div>
+
         <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Target Scope */}
           <div>
-            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Target Scope</label>
+            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Target Batch Scope</label>
             <div className="flex items-center space-x-3 pt-1">
               <label className="flex items-center space-x-2 text-xs text-theme-main cursor-pointer">
                 <input
@@ -212,38 +362,109 @@ export default function MaterialsPage() {
             </div>
           </div>
 
+          {/* Main Topic */}
           <div>
-            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Material Title</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-theme-sub uppercase">
+                Main Topic / Module <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[11px] text-theme-sub">e.g. Unit 1: Foundations</span>
+            </div>
             <input
               type="text"
               required
-              placeholder="e.g. Unit 3 Grammar & Syntax Guide"
+              list="existing-topics-list"
+              placeholder="e.g. Unit 1: English Grammar Basics"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
+            />
+            <datalist id="existing-topics-list">
+              {existingTopics.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+          </div>
+
+          {/* Subtopic */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-theme-sub uppercase">
+                Subtopic / Section (Optional)
+              </label>
+              <span className="text-[11px] text-theme-sub">e.g. Present Perfect Tense</span>
+            </div>
+            <input
+              type="text"
+              list="existing-subtopics-list"
+              placeholder="e.g. Irregular Verbs & Practice"
+              value={subtopic}
+              onChange={(e) => setSubtopic(e.target.value)}
+              className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
+            />
+            <datalist id="existing-subtopics-list">
+              {existingSubtopics.map((st) => (
+                <option key={st} value={st} />
+              ))}
+            </datalist>
+          </div>
+
+          {/* Material Title */}
+          <div>
+            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">
+              Title / Document Label (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Complete Lecture Slides (Defaults to file name)"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
 
+          {/* Description */}
           <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Description (Optional)</label>
+            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Description / Notes (Optional)</label>
             <input
               type="text"
-              placeholder="Brief description of the material..."
+              placeholder="Brief instructions or summary of what these files contain..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
 
+          {/* Multiple File Upload input */}
           <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Upload File (.pdf, .ppt, .docx - Max 5MB)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-theme-sub uppercase">
+                Upload File(s) (.pdf, .ppt, .pptx, .docx, images - Max 5MB each) <span className="text-rose-500">*</span>
+              </label>
+              {selectedFiles.length > 0 && (
+                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                  {selectedFiles.length} file(s) selected (Total: {(selectedFiles.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB)
+                </span>
+              )}
+            </div>
             <input
+              id="material-file-input"
               type="file"
+              multiple
               required
               accept=".pdf,.ppt,.pptx,.docx,.doc,.png,.jpg,.jpeg"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={handleFileChange}
               className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
             />
+            {selectedFiles.length > 1 && (
+              <p className="text-xs text-theme-sub mt-1">
+                Tip: All {selectedFiles.length} selected files will be uploaded together under{' '}
+                <strong className="text-indigo-600 dark:text-indigo-300">
+                  {topic.trim() || 'General'}{subtopic.trim() ? ` > ${subtopic.trim()}` : ''}
+                </strong>
+                .
+              </p>
+            )}
           </div>
 
           <div className="md:col-span-2 flex justify-end">
@@ -253,79 +474,153 @@ export default function MaterialsPage() {
               className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl flex items-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
             >
               <UploadCloud className="w-5 h-5" />
-              <span>{uploading ? 'Compressing & Uploading...' : 'Upload Material'}</span>
+              <span>{uploading ? 'Processing & Uploading...' : `Upload to Topic (${selectedFiles.length || 1} File${selectedFiles.length > 1 ? 's' : ''})`}</span>
             </button>
           </div>
         </form>
       </div>
 
-      {/* Materials List */}
+      {/* Materials Explorer Header with Filter & Search */}
       <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-xl space-y-4">
-        <h2 className="text-lg font-bold text-theme-main">Uploaded Course Materials</h2>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-theme-main flex items-center space-x-2">
+              <Layers className="w-5 h-5 text-indigo-500" />
+              <span>Hierarchical Notes Explorer</span>
+            </h2>
+            <p className="text-xs text-theme-sub mt-0.5">
+              Click any Topic to expand or collapse its subtopics and files.
+            </p>
+          </div>
 
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search Input */}
+            <div className="relative min-w-[200px]">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-theme-sub" />
+              <input
+                type="text"
+                placeholder="Search topics, files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-theme-input border border-theme rounded-xl text-theme-main text-xs focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Batch Filter */}
+            <div className="flex items-center space-x-1">
+              <Filter className="w-4 h-4 text-theme-sub" />
+              <select
+                value={filterBatch}
+                onChange={(e) => setFilterBatch(e.target.value)}
+                className="px-3 py-1.5 bg-theme-input border border-theme rounded-xl text-theme-main text-xs"
+              >
+                <option value="ALL">All Batches & Global</option>
+                <option value="GLOBAL">Global Materials Only</option>
+                {batches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.cefrLevel})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Hierarchical Topics Accordion List */}
         {loading ? (
-          <div className="py-8 text-center text-theme-sub animate-pulse">Loading materials...</div>
-        ) : materials.length === 0 ? (
-          <p className="text-sm text-theme-sub text-center py-6">No materials uploaded yet.</p>
+          <div className="py-12 text-center text-theme-sub animate-pulse">Loading study topics and documents...</div>
+        ) : Object.keys(groupedMaterials).length === 0 ? (
+          <div className="text-center py-10 text-theme-sub">
+            <Folder className="w-10 h-10 mx-auto mb-2 opacity-50 text-indigo-400" />
+            <p className="text-sm font-semibold">No materials found.</p>
+            <p className="text-xs mt-1">Upload a PDF or document above to create your first Topic & Subtopic folder!</p>
+          </div>
         ) : (
-          <div className="divide-y divide-theme">
-            {materials.map((m) => {
-              const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'Unknown Batch');
-              const fileType = (m.fileType || 'file').toLowerCase();
-              const fileUrl = formatCloudinaryFileUrl(m.fileUrl);
-              const isPdf = fileType === 'pdf' || fileUrl.toLowerCase().includes('.pdf');
-              const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType);
-              const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+          <div className="space-y-4">
+            {Object.entries(groupedMaterials).map(([topicName, data]) => {
+              const isCollapsed = collapsedTopics[topicName];
+              const subtopicKeys = Object.keys(data.subtopics);
 
               return (
-                <div key={m.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-indigo-600/20 text-indigo-500 rounded-xl border border-indigo-500/20 shrink-0">
-                      <FileText className="w-6 h-6" />
+                <div
+                  key={topicName}
+                  className="border border-theme rounded-2xl bg-theme-card-sub overflow-hidden shadow-sm transition-all"
+                >
+                  {/* Topic Header */}
+                  <div
+                    onClick={() => toggleTopicCollapse(topicName)}
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-indigo-600/10 text-indigo-500 rounded-xl border border-indigo-500/20">
+                        {isCollapsed ? <Folder className="w-5 h-5" /> : <FolderOpen className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-theme-main text-base flex items-center space-x-2">
+                          <span>{topicName}</span>
+                          <span className="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 font-semibold rounded-full">
+                            {data.total} file{data.total > 1 ? 's' : ''}
+                          </span>
+                        </h3>
+                        <p className="text-xs text-theme-sub">
+                          {subtopicKeys.length > 0
+                            ? `${subtopicKeys.length} Subtopic${subtopicKeys.length > 1 ? 's' : ''}`
+                            : 'Direct study guides'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-semibold text-theme-main text-sm truncate">{m.title}</h4>
-                      <p className="text-xs text-theme-sub mt-0.5">
-                        Batch: <span className="text-indigo-600 dark:text-indigo-300 font-medium">{batchName}</span> • {(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • {fileType.toUpperCase()}
-                      </p>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        className="p-1.5 text-theme-sub hover:text-theme-main rounded-lg"
+                      >
+                        {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center flex-wrap gap-2 pt-2 sm:pt-0">
-                    <button
-                      onClick={() => setPreviewMaterial({ ...m, resolvedUrl: fileUrl, gDocsUrl, isPdf, isImage })}
-                      className="px-3 py-1.5 bg-indigo-600/20 text-indigo-600 dark:text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all whitespace-nowrap"
-                      title="In-App Document Preview"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Preview</span>
-                    </button>
-                    <button
-                      onClick={() => handleEditOpen(m)}
-                      className="px-3 py-1.5 bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all whitespace-nowrap"
-                      title="Edit Material Details"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                      <span>Edit</span>
-                    </button>
-                    <a
-                      href={fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow transition-colors whitespace-nowrap"
-                      title="Open / View File"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Open File</span>
-                    </a>
-                    <button
-                      onClick={() => handleDelete(m.id)}
-                      className="p-2 text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0"
-                      title="Delete Material"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
+                  {/* Topic Content Body (Subtopics & Files) */}
+                  {!isCollapsed && (
+                    <div className="p-4 pt-1 space-y-4 border-t border-theme bg-theme-card">
+                      {/* Subtopic Sections */}
+                      {subtopicKeys.map((subName) => {
+                        const items = data.subtopics[subName];
+                        return (
+                          <div
+                            key={subName}
+                            className="bg-theme-card-sub border border-theme rounded-xl p-3 space-y-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center space-x-1.5">
+                                <Folder className="w-3.5 h-3.5" />
+                                <span>Subtopic: {subName}</span>
+                                <span className="text-[10px] text-theme-sub font-normal">({items.length} files)</span>
+                              </h4>
+                            </div>
+
+                            <div className="divide-y divide-theme">
+                              {items.map((m) => renderMaterialRow(m))}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Direct items without subtopic */}
+                      {data.direct.length > 0 && (
+                        <div className="space-y-2">
+                          {subtopicKeys.length > 0 && (
+                            <h4 className="text-xs font-semibold uppercase text-theme-sub px-1">
+                              General Documents (No Subtopic)
+                            </h4>
+                          )}
+                          <div className="divide-y divide-theme bg-theme-card-sub border border-theme rounded-xl p-3">
+                            {data.direct.map((m) => renderMaterialRow(m))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -380,6 +675,28 @@ export default function MaterialsPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Main Topic</label>
+                  <input
+                    type="text"
+                    required
+                    value={editTopic}
+                    onChange={(e) => setEditTopic(e.target.value)}
+                    className="w-full px-3 py-2 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Subtopic (Optional)</label>
+                  <input
+                    type="text"
+                    value={editSubtopic}
+                    onChange={(e) => setEditSubtopic(e.target.value)}
+                    className="w-full px-3 py-2 bg-theme-input border border-theme rounded-xl text-theme-main text-sm focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-theme-sub uppercase mb-1">Material Title</label>
                 <input
@@ -409,7 +726,7 @@ export default function MaterialsPage() {
                   onChange={(e) => setEditFile(e.target.files?.[0] || null)}
                   className="w-full px-4 py-2.5 bg-theme-input border border-theme rounded-xl text-theme-main text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
                 />
-                <p className="text-[11px] text-theme-sub mt-1">Leave empty to keep existing file: {editingMaterial.fileType.toUpperCase()}</p>
+                <p className="text-[11px] text-theme-sub mt-1">Leave empty to keep existing file: {editingMaterial.fileType?.toUpperCase()}</p>
               </div>
 
               <div className="flex justify-end space-x-2 pt-2 border-t border-theme">
@@ -440,7 +757,12 @@ export default function MaterialsPage() {
           <div className="bg-theme-card border border-theme rounded-2xl p-4 sm:p-6 shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between border-b border-theme pb-3">
               <div className="min-w-0 flex-1 pr-2">
-                <h3 className="font-bold text-theme-main text-base sm:text-lg truncate">{previewMaterial.title}</h3>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 rounded font-semibold">
+                    {previewMaterial.topic} {previewMaterial.subtopic ? `> ${previewMaterial.subtopic}` : ''}
+                  </span>
+                </div>
+                <h3 className="font-bold text-theme-main text-base sm:text-lg truncate mt-1">{previewMaterial.title}</h3>
                 <p className="text-xs text-theme-sub truncate">{previewMaterial.description || 'Document Preview'}</p>
               </div>
               <button
@@ -484,4 +806,81 @@ export default function MaterialsPage() {
       )}
     </div>
   );
+
+  // Helper renderer for a single material item row
+  function renderMaterialRow(m: any) {
+    const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'General');
+    const fileType = (m.fileType || 'file').toLowerCase();
+    const fileUrl = formatCloudinaryFileUrl(m.fileUrl);
+    const isPdf = fileType === 'pdf' || fileUrl.toLowerCase().includes('.pdf');
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType);
+    const gDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+
+    return (
+      <div
+        key={m.id}
+        className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors"
+      >
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="p-2.5 bg-indigo-600/20 text-indigo-500 rounded-xl border border-indigo-500/20 shrink-0">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-semibold text-theme-main text-sm truncate">{m.title}</h4>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-theme-sub mt-0.5">
+              <span className="px-1.5 py-0.5 bg-theme-input text-indigo-600 dark:text-indigo-300 font-mono font-bold rounded text-[10px]">
+                {fileType.toUpperCase()}
+              </span>
+              <span>•</span>
+              <span>{(m.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB</span>
+              <span>•</span>
+              <span className="text-indigo-600 dark:text-indigo-300 font-medium">{batchName}</span>
+              {m.description && (
+                <>
+                  <span>•</span>
+                  <span className="truncate max-w-[200px] text-theme-sub italic">{m.description}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center flex-wrap gap-2 pt-2 sm:pt-0 shrink-0">
+          <button
+            onClick={() => setPreviewMaterial({ ...m, resolvedUrl: fileUrl, gDocsUrl, isPdf, isImage })}
+            className="px-3 py-1.5 bg-indigo-600/20 text-indigo-600 dark:text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all whitespace-nowrap"
+            title="In-App Document Preview"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Preview</span>
+          </button>
+          <button
+            onClick={() => handleEditOpen(m)}
+            className="px-3 py-1.5 bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all whitespace-nowrap"
+            title="Edit Material Details"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Edit</span>
+          </button>
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow transition-colors whitespace-nowrap"
+            title="Open / View File"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Open</span>
+          </a>
+          <button
+            onClick={() => handleDelete(m.id)}
+            className="p-1.5 text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            title="Delete Material"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 }

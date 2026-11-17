@@ -672,37 +672,61 @@ export async function uploadMaterialAction(formData: FormData) {
 
     const batchId = formData.get('batchId') as string;
     const isGlobal = formData.get('isGlobal') === 'true';
-    const title = formData.get('title') as string;
-    const description = formData.get('description') as string;
-    const file = formData.get('file') as File;
+    const topic = ((formData.get('topic') as string) || 'General').trim() || 'General';
+    const subtopic = ((formData.get('subtopic') as string) || '').trim() || null;
+    const title = (formData.get('title') as string) || '';
+    const description = (formData.get('description') as string) || '';
 
-    if (!file || (!batchId && !isGlobal) || !title) {
-      return { success: false, error: 'Missing required fields.' };
+    // Support single file or multiple files
+    const singleFile = formData.get('file') as File | null;
+    const multiFiles = (formData.getAll('files') as File[]).filter((f) => f && f.size > 0);
+    const filesToUpload: File[] = multiFiles.length > 0 ? multiFiles : (singleFile && singleFile.size > 0 ? [singleFile] : []);
+
+    if (filesToUpload.length === 0 || (!batchId && !isGlobal)) {
+      return { success: false, error: 'Missing required file or target batch.' };
     }
 
     const targetFolder = isGlobal ? `materials/${user.id}/global` : `materials/${user.id}/${batchId}`;
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
     const { uploadToCloudinary } = await import('@/lib/storage/cloudinary');
-    const uploadResult = await uploadToCloudinary(fileBuffer, file.name, targetFolder);
 
-    if (!uploadResult.success || !uploadResult.url) {
-      return { success: false, error: uploadResult.error || 'Cloudinary upload failed.' };
+    const createdMaterials = [];
+
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const currentFile = filesToUpload[i];
+      const fileBuffer = Buffer.from(await currentFile.arrayBuffer());
+      const uploadResult = await uploadToCloudinary(fileBuffer, currentFile.name, targetFolder);
+
+      if (!uploadResult.success || !uploadResult.url) {
+        return { success: false, error: uploadResult.error || `Failed to upload "${currentFile.name}".` };
+      }
+
+      // If user provided a title and there are multiple files, append filename; if single file, use title or filename
+      let materialTitle = title.trim();
+      if (!materialTitle) {
+        materialTitle = currentFile.name.replace(/\.[^/.]+$/, '');
+      } else if (filesToUpload.length > 1) {
+        materialTitle = `${materialTitle} - ${currentFile.name.replace(/\.[^/.]+$/, '')}`;
+      }
+
+      const material = await prisma.courseMaterial.create({
+        data: {
+          teacherId: user.id,
+          batchId: isGlobal ? null : batchId,
+          isGlobal,
+          topic,
+          subtopic,
+          title: materialTitle,
+          description: description || null,
+          fileUrl: uploadResult.url,
+          fileType: currentFile.name.split('.').pop() || 'file',
+          fileSizeBytes: uploadResult.bytes || currentFile.size,
+        },
+      });
+
+      createdMaterials.push(material);
     }
 
-    const material = await prisma.courseMaterial.create({
-      data: {
-        teacherId: user.id,
-        batchId: isGlobal ? null : batchId,
-        isGlobal,
-        title,
-        description: description || null,
-        fileUrl: uploadResult.url,
-        fileType: file.name.split('.').pop() || 'file',
-        fileSizeBytes: uploadResult.bytes || file.size,
-      },
-    });
-
-    return { success: true, material };
+    return { success: true, count: createdMaterials.length, material: createdMaterials[0] };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to upload material.' };
   }
@@ -724,6 +748,8 @@ export async function updateMaterialAction(formData: FormData) {
     const id = formData.get('id') as string;
     const batchId = formData.get('batchId') as string;
     const isGlobal = formData.get('isGlobal') === 'true';
+    const topic = ((formData.get('topic') as string) || 'General').trim() || 'General';
+    const subtopic = ((formData.get('subtopic') as string) || '').trim() || null;
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const file = formData.get('file') as File | null;
@@ -755,6 +781,8 @@ export async function updateMaterialAction(formData: FormData) {
       data: {
         batchId: isGlobal ? null : (batchId || null),
         isGlobal,
+        topic,
+        subtopic,
         title,
         description: description || null,
         ...fileData,
