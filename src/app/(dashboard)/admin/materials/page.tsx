@@ -53,7 +53,7 @@ export default function MaterialsPage() {
   // Filter & Search states
   const [filterBatch, setFilterBatch] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [collapsedTopics, setCollapsedTopics] = useState<Record<string, boolean>>({});
+  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
   const [reordering, setReordering] = useState(false);
 
   // In-App Preview Modal State
@@ -117,8 +117,8 @@ export default function MaterialsPage() {
     return Array.from(set);
   }, [materials, topic]);
 
-  const toggleTopicCollapse = (topicName: string) => {
-    setCollapsedTopics((prev) => ({
+  const toggleTopicExpand = (topicName: string) => {
+    setExpandedTopics((prev) => ({
       ...prev,
       [topicName]: !prev[topicName],
     }));
@@ -717,7 +717,7 @@ export default function MaterialsPage() {
             {topicOrderList.map((topicName, topicIdx) => {
               const data = groupedMaterials[topicName];
               if (!data) return null;
-              const isCollapsed = collapsedTopics[topicName];
+              const isExpanded = !!expandedTopics[topicName];
               const subtopicKeys = Object.keys(data.subtopics).sort((a, b) => {
                 return (data.subtopics[a]?.subtopicOrder ?? 0) - (data.subtopics[b]?.subtopicOrder ?? 0);
               });
@@ -730,11 +730,11 @@ export default function MaterialsPage() {
                   {/* Topic Header */}
                   <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 transition-colors">
                     <div
-                      onClick={() => toggleTopicCollapse(topicName)}
+                      onClick={() => toggleTopicExpand(topicName)}
                       className="flex items-center space-x-3 cursor-pointer flex-1 min-w-0"
                     >
                       <div className="p-2 bg-indigo-600/10 text-indigo-500 rounded-xl border border-indigo-500/20 shrink-0">
-                        {isCollapsed ? <Folder className="w-5 h-5" /> : <FolderOpen className="w-5 h-5" />}
+                        {isExpanded ? <FolderOpen className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-theme-main text-base flex items-center space-x-2 truncate">
@@ -779,17 +779,17 @@ export default function MaterialsPage() {
 
                       <button
                         type="button"
-                        onClick={() => toggleTopicCollapse(topicName)}
+                        onClick={() => toggleTopicExpand(topicName)}
                         className="p-1.5 text-theme-sub hover:text-theme-main rounded-lg"
-                        title={isCollapsed ? 'Expand Topic' : 'Collapse Topic'}
+                        title={isExpanded ? 'Collapse Topic' : 'Expand Topic'}
                       >
-                        {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                       </button>
                     </div>
                   </div>
 
-                  {/* Topic Content Body (Subtopics & Files) */}
-                  {!isCollapsed && (
+                  {/* Topic Content Body (Subtopics & Files) - Hidden by default until toggled */}
+                  {isExpanded && (
                     <div className="p-4 pt-1 space-y-4 border-t border-theme bg-theme-card">
                       {/* Subtopic Sections */}
                       {subtopicKeys.map((subName, subIdx) => {

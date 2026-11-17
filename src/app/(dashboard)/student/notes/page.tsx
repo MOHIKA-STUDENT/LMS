@@ -22,7 +22,7 @@ export default function StudentNotesPage() {
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [collapsedTopics, setCollapsedTopics] = useState<Record<string, boolean>>({});
+  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
 
   // In-App Preview Modal State
   const [previewMaterial, setPreviewMaterial] = useState<any | null>(null);
@@ -40,8 +40,8 @@ export default function StudentNotesPage() {
     fetchNotes();
   }, []);
 
-  const toggleTopicCollapse = (topicName: string) => {
-    setCollapsedTopics((prev) => ({
+  const toggleTopicExpand = (topicName: string) => {
+    setExpandedTopics((prev) => ({
       ...prev,
       [topicName]: !prev[topicName],
     }));
@@ -159,7 +159,7 @@ export default function StudentNotesPage() {
           {orderedTopics.map((topicName) => {
             const data = groupedMaterials[topicName];
             if (!data) return null;
-            const isCollapsed = !!collapsedTopics[topicName];
+            const isExpanded = !!expandedTopics[topicName];
             const subtopicKeys = Object.keys(data.subtopics).sort((a, b) => {
               return (data.subtopics[a]?.subtopicOrder ?? 0) - (data.subtopics[b]?.subtopicOrder ?? 0);
             });
@@ -171,12 +171,12 @@ export default function StudentNotesPage() {
               >
                 {/* Topic Accordion Header */}
                 <div
-                  onClick={() => toggleTopicCollapse(topicName)}
+                  onClick={() => toggleTopicExpand(topicName)}
                   className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/40 transition-colors border-b border-theme/50"
                 >
                   <div className="flex items-center space-x-3.5">
                     <div className="p-2.5 bg-indigo-600/10 text-indigo-500 rounded-xl border border-indigo-500/20">
-                      {isCollapsed ? <Folder className="w-6 h-6" /> : <FolderOpen className="w-6 h-6" />}
+                      {isExpanded ? <FolderOpen className="w-6 h-6" /> : <Folder className="w-6 h-6" />}
                     </div>
                     <div>
                       <h2 className="font-bold text-theme-main text-lg flex items-center space-x-2.5">
@@ -196,15 +196,17 @@ export default function StudentNotesPage() {
                   <div className="flex items-center space-x-2">
                     <button
                       type="button"
+                      onClick={() => toggleTopicExpand(topicName)}
                       className="p-2 text-theme-sub hover:text-theme-main rounded-xl bg-theme-card-sub border border-theme"
+                      title={isExpanded ? 'Collapse Topic' : 'Expand Topic'}
                     >
-                      {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                      {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Topic Body: Subtopics & Document Cards */}
-                {!isCollapsed && (
+                {/* Topic Body: Subtopics & Document Cards - Hidden by default until toggled */}
+                {isExpanded && (
                   <div className="p-5 space-y-6 bg-theme-card-sub/40">
                     {/* Render Each Subtopic Group */}
                     {subtopicKeys.map((subName) => {
