@@ -291,8 +291,6 @@ export default function MaterialsPage() {
       }
     > = {};
 
-    const orderedTopics: string[] = [];
-
     filtered.forEach((m) => {
       const t = m.topic?.trim() || 'General';
       if (!topicMap[t]) {
@@ -302,7 +300,6 @@ export default function MaterialsPage() {
           direct: [],
           total: 0,
         };
-        orderedTopics.push(t);
       }
       topicMap[t].total += 1;
 
@@ -318,6 +315,19 @@ export default function MaterialsPage() {
       } else {
         topicMap[t].direct.push(m);
       }
+    });
+
+    // Sort items inside each subtopic & direct items by order
+    Object.values(topicMap).forEach((tData) => {
+      Object.values(tData.subtopics).forEach((subData) => {
+        subData.items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      });
+      tData.direct.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    });
+
+    // Sort topics strictly by topicOrder
+    const orderedTopics = Object.keys(topicMap).sort((a, b) => {
+      return (topicMap[a].topicOrder ?? 0) - (topicMap[b].topicOrder ?? 0);
     });
 
     return { groupedMaterials: topicMap, topicOrderList: orderedTopics };
@@ -370,7 +380,10 @@ export default function MaterialsPage() {
     const topicData = groupedMaterials[topicName];
     if (!topicData) return;
 
-    const subtopics = Object.keys(topicData.subtopics);
+    // Subtopics sorted by subtopicOrder
+    const subtopics = Object.keys(topicData.subtopics).sort((a, b) => {
+      return (topicData.subtopics[a].subtopicOrder ?? 0) - (topicData.subtopics[b].subtopicOrder ?? 0);
+    });
     const idx = subtopics.indexOf(subtopicName);
     if (idx < 0) return;
     if (direction === 'up' && idx === 0) return;
@@ -422,10 +435,11 @@ export default function MaterialsPage() {
 
     let itemsList: any[] = [];
     if (subtopicName) {
-      itemsList = topicData.subtopics[subtopicName]?.items || [];
+      itemsList = [...(topicData.subtopics[subtopicName]?.items || [])];
     } else {
-      itemsList = topicData.direct || [];
+      itemsList = [...(topicData.direct || [])];
     }
+    itemsList.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     const idx = itemsList.findIndex((m) => m.id === materialId);
     if (idx < 0) return;
@@ -704,7 +718,9 @@ export default function MaterialsPage() {
               const data = groupedMaterials[topicName];
               if (!data) return null;
               const isCollapsed = collapsedTopics[topicName];
-              const subtopicKeys = Object.keys(data.subtopics);
+              const subtopicKeys = Object.keys(data.subtopics).sort((a, b) => {
+                return (data.subtopics[a]?.subtopicOrder ?? 0) - (data.subtopics[b]?.subtopicOrder ?? 0);
+              });
 
               return (
                 <div

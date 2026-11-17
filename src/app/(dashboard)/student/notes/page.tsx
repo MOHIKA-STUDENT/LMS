@@ -65,31 +65,49 @@ export default function StudentNotesPage() {
     const topicMap: Record<
       string,
       {
-        subtopics: Record<string, any[]>;
+        topicOrder: number;
+        subtopics: Record<string, { subtopicOrder: number; items: any[] }>;
         direct: any[];
         total: number;
       }
     > = {};
 
-    const topics: string[] = [];
-
     filtered.forEach((m) => {
       const t = m.topic?.trim() || 'General';
       if (!topicMap[t]) {
-        topicMap[t] = { subtopics: {}, direct: [], total: 0 };
-        topics.push(t);
+        topicMap[t] = {
+          topicOrder: m.topicOrder ?? 0,
+          subtopics: {},
+          direct: [],
+          total: 0,
+        };
       }
       topicMap[t].total += 1;
 
       if (m.subtopic && m.subtopic.trim()) {
         const sub = m.subtopic.trim();
         if (!topicMap[t].subtopics[sub]) {
-          topicMap[t].subtopics[sub] = [];
+          topicMap[t].subtopics[sub] = {
+            subtopicOrder: m.subtopicOrder ?? 0,
+            items: [],
+          };
         }
-        topicMap[t].subtopics[sub].push(m);
+        topicMap[t].subtopics[sub].items.push(m);
       } else {
         topicMap[t].direct.push(m);
       }
+    });
+
+    // Sort items inside each subtopic & direct items by order
+    Object.values(topicMap).forEach((tData) => {
+      Object.values(tData.subtopics).forEach((subData) => {
+        subData.items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      });
+      tData.direct.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    });
+
+    const topics = Object.keys(topicMap).sort((a, b) => {
+      return (topicMap[a].topicOrder ?? 0) - (topicMap[b].topicOrder ?? 0);
     });
 
     return { groupedMaterials: topicMap, orderedTopics: topics };
@@ -142,7 +160,9 @@ export default function StudentNotesPage() {
             const data = groupedMaterials[topicName];
             if (!data) return null;
             const isCollapsed = !!collapsedTopics[topicName];
-            const subtopicKeys = Object.keys(data.subtopics);
+            const subtopicKeys = Object.keys(data.subtopics).sort((a, b) => {
+              return (data.subtopics[a]?.subtopicOrder ?? 0) - (data.subtopics[b]?.subtopicOrder ?? 0);
+            });
 
             return (
               <div
@@ -188,7 +208,7 @@ export default function StudentNotesPage() {
                   <div className="p-5 space-y-6 bg-theme-card-sub/40">
                     {/* Render Each Subtopic Group */}
                     {subtopicKeys.map((subName) => {
-                      const items = data.subtopics[subName];
+                      const items = data.subtopics[subName]?.items || [];
                       return (
                         <div key={subName} className="space-y-3">
                           <div className="flex items-center space-x-2">
