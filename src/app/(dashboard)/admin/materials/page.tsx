@@ -800,7 +800,7 @@ export default function MaterialsPage() {
                             className="bg-theme-card-sub border border-theme rounded-xl p-3.5 space-y-3"
                           >
                             {/* Subtopic Header with Reorder Arrows */}
-                            <div className="flex items-center justify-between border-b border-theme/60 pb-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-theme/60 pb-2">
                               <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center space-x-1.5">
                                 <Folder className="w-3.5 h-3.5" />
                                 <span>Subtopic: {subName}</span>
@@ -808,14 +808,14 @@ export default function MaterialsPage() {
                               </h4>
 
                               <div className="flex items-center space-x-1">
-                                <span className="text-[10px] text-theme-sub font-semibold uppercase mr-1">
+                                <span className="text-[10px] text-theme-sub font-semibold uppercase mr-1 hidden xs:inline sm:inline">
                                   Subtopic Order:
                                 </span>
                                 <button
                                   type="button"
                                   disabled={reordering || subIdx === 0}
                                   onClick={() => handleMoveSubtopic(topicName, subName, 'up')}
-                                  className="p-1 text-theme-sub hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                  className="p-1.5 text-theme-sub hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
                                   title="Move Subtopic Up"
                                 >
                                   <ArrowUp className="w-3.5 h-3.5" />
@@ -824,7 +824,7 @@ export default function MaterialsPage() {
                                   type="button"
                                   disabled={reordering || subIdx === subtopicKeys.length - 1}
                                   onClick={() => handleMoveSubtopic(topicName, subName, 'down')}
-                                  className="p-1 text-theme-sub hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                  className="p-1.5 text-theme-sub hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
                                   title="Move Subtopic Down"
                                 >
                                   <ArrowDown className="w-3.5 h-3.5" />
@@ -867,8 +867,8 @@ export default function MaterialsPage() {
 
       {/* Edit Material Modal */}
       {editingMaterial && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-theme-card border border-theme rounded-2xl p-6 shadow-2xl w-full max-w-lg space-y-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-theme-card border border-theme rounded-2xl p-5 sm:p-6 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between border-b border-theme pb-3">
               <h3 className="font-bold text-theme-main text-lg flex items-center space-x-2">
                 <Edit3 className="w-5 h-5 text-indigo-500" />
@@ -1064,26 +1064,26 @@ export default function MaterialsPage() {
         key={m.id}
         className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors"
       >
-        <div className="flex items-center space-x-3 min-w-0">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
           {/* Note Reorder Arrows */}
-          <div className="flex flex-col items-center justify-center space-y-0.5 shrink-0 bg-theme-input p-1 rounded-lg border border-theme">
+          <div className="flex flex-col items-center justify-center space-y-1 shrink-0 bg-theme-input p-1 rounded-lg border border-theme">
             <button
               type="button"
               disabled={reordering || itemIdx === 0}
               onClick={() => handleMoveMaterial(topicName, subtopicName, m.id, 'up')}
-              className="p-0.5 text-theme-sub hover:text-indigo-600 disabled:opacity-20 disabled:pointer-events-none"
+              className="p-1 text-theme-sub hover:text-indigo-600 disabled:opacity-20 disabled:pointer-events-none rounded hover:bg-theme-card-sub transition-colors"
               title="Move Note Up"
             >
-              <ArrowUp className="w-3 h-3" />
+              <ArrowUp className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               disabled={reordering || itemIdx === totalItems - 1}
               onClick={() => handleMoveMaterial(topicName, subtopicName, m.id, 'down')}
-              className="p-0.5 text-theme-sub hover:text-indigo-600 disabled:opacity-20 disabled:pointer-events-none"
+              className="p-1 text-theme-sub hover:text-indigo-600 disabled:opacity-20 disabled:pointer-events-none rounded hover:bg-theme-card-sub transition-colors"
               title="Move Note Down"
             >
-              <ArrowDown className="w-3 h-3" />
+              <ArrowDown className="w-3.5 h-3.5" />
             </button>
           </div>
 
