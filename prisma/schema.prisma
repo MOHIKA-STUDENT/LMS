@@ -94,6 +94,9 @@ model CourseMaterial {
   isGlobal      Boolean  @default(false) // Target all batches of this teacher/institution if true
   topic         String?  @default("General") // Main Topic / Module
   subtopic      String?  // Sub Topic
+  topicOrder    Int      @default(0)
+  subtopicOrder Int      @default(0)
+  order         Int      @default(0)
   title         String
   description   String?
   fileUrl       String

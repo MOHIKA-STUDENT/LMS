@@ -651,7 +651,12 @@ export async function getMaterialsAction(batchId?: string) {
     const materials = await prisma.courseMaterial.findMany({
       where: whereClause,
       include: { batch: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { topicOrder: 'asc' },
+        { subtopicOrder: 'asc' },
+        { order: 'asc' },
+        { createdAt: 'desc' },
+      ],
     });
 
     const sanitizedMaterials = materials.map((m) => ({
@@ -689,6 +694,45 @@ export async function uploadMaterialAction(formData: FormData) {
     const targetFolder = isGlobal ? `materials/${user.id}/global` : `materials/${user.id}/${batchId}`;
     const { uploadToCloudinary } = await import('@/lib/storage/cloudinary');
 
+    // Find existing topicOrder if topic exists, else assign next order index
+    const existingTopicMaterial = await prisma.courseMaterial.findFirst({
+      where: { teacherId: user.id, topic },
+      select: { topicOrder: true },
+    });
+    let topicOrder = existingTopicMaterial?.topicOrder;
+    if (topicOrder === undefined || topicOrder === null) {
+      const maxTopicOrder = await prisma.courseMaterial.aggregate({
+        where: { teacherId: user.id },
+        _max: { topicOrder: true },
+      });
+      topicOrder = (maxTopicOrder._max.topicOrder ?? -1) + 1;
+    }
+
+    // Find existing subtopicOrder if subtopic exists, else assign next order index
+    let subtopicOrder = 0;
+    if (subtopic) {
+      const existingSubMaterial = await prisma.courseMaterial.findFirst({
+        where: { teacherId: user.id, topic, subtopic },
+        select: { subtopicOrder: true },
+      });
+      if (existingSubMaterial?.subtopicOrder !== undefined && existingSubMaterial?.subtopicOrder !== null) {
+        subtopicOrder = existingSubMaterial.subtopicOrder;
+      } else {
+        const maxSubOrder = await prisma.courseMaterial.aggregate({
+          where: { teacherId: user.id, topic },
+          _max: { subtopicOrder: true },
+        });
+        subtopicOrder = (maxSubOrder._max.subtopicOrder ?? -1) + 1;
+      }
+    }
+
+    // Find max order for items within this topic & subtopic
+    const maxItemOrder = await prisma.courseMaterial.aggregate({
+      where: { teacherId: user.id, topic, subtopic: subtopic || null },
+      _max: { order: true },
+    });
+    let nextItemOrder = (maxItemOrder._max.order ?? -1) + 1;
+
     const createdMaterials = [];
 
     for (let i = 0; i < filesToUpload.length; i++) {
@@ -715,6 +759,9 @@ export async function uploadMaterialAction(formData: FormData) {
           isGlobal,
           topic,
           subtopic,
+          topicOrder,
+          subtopicOrder,
+          order: nextItemOrder++,
           title: materialTitle,
           description: description || null,
           fileUrl: uploadResult.url,
@@ -792,6 +839,64 @@ export async function updateMaterialAction(formData: FormData) {
     return { success: true, material };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to update material.' };
+  }
+}
+
+export async function reorderTopicsAction(topicNamesInOrder: string[]) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    for (let i = 0; i < topicNamesInOrder.length; i++) {
+      await prisma.courseMaterial.updateMany({
+        where: {
+          teacherId: user.id,
+          topic: topicNamesInOrder[i],
+        },
+        data: { topicOrder: i },
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to reorder topics.' };
+  }
+}
+
+export async function reorderSubtopicsAction(topic: string, subtopicNamesInOrder: string[]) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    for (let i = 0; i < subtopicNamesInOrder.length; i++) {
+      await prisma.courseMaterial.updateMany({
+        where: {
+          teacherId: user.id,
+          topic,
+          subtopic: subtopicNamesInOrder[i],
+        },
+        data: { subtopicOrder: i },
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to reorder subtopics.' };
+  }
+}
+
+export async function reorderMaterialsAction(materialIdsInOrder: string[]) {
+  try {
+    const user = await currentUser();
+    if (!user) return { success: false, error: 'Unauthorized.' };
+
+    for (let i = 0; i < materialIdsInOrder.length; i++) {
+      await prisma.courseMaterial.update({
+        where: { id: materialIdsInOrder[i] },
+        data: { order: i },
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to reorder materials.' };
   }
 }
 

@@ -7,6 +7,9 @@ import {
   uploadMaterialAction,
   updateMaterialAction,
   deleteMaterialAction,
+  reorderTopicsAction,
+  reorderSubtopicsAction,
+  reorderMaterialsAction,
 } from '@/app/actions/lms-actions';
 import { processAndValidateFileUpload } from '@/lib/utils/asset-shield';
 import { formatCloudinaryFileUrl } from '@/lib/utils/url-helper';
@@ -26,6 +29,9 @@ import {
   Layers,
   Search,
   Filter,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,6 +54,7 @@ export default function MaterialsPage() {
   const [filterBatch, setFilterBatch] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedTopics, setCollapsedTopics] = useState<Record<string, boolean>>({});
+  const [reordering, setReordering] = useState(false);
 
   // In-App Preview Modal State
   const [previewMaterial, setPreviewMaterial] = useState<any | null>(null);
@@ -169,7 +176,6 @@ export default function MaterialsPage() {
       setTitle('');
       setDescription('');
       setSelectedFiles([]);
-      // Reset input element
       const fileInput = document.getElementById('material-file-input') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
@@ -250,8 +256,8 @@ export default function MaterialsPage() {
     }
   };
 
-  // Group materials by Topic -> Subtopic
-  const groupedMaterials = useMemo(() => {
+  // Group materials by Topic -> Subtopic in sorted sequence
+  const { groupedMaterials, topicOrderList } = useMemo(() => {
     let filtered = materials;
 
     // Filter by Batch
@@ -275,36 +281,188 @@ export default function MaterialsPage() {
       );
     }
 
-    // Map by Topic -> { subtopics: { [subtopic]: items[] }, direct: items[] }
     const topicMap: Record<
       string,
       {
-        subtopics: Record<string, any[]>;
+        topicOrder: number;
+        subtopics: Record<string, { subtopicOrder: number; items: any[] }>;
         direct: any[];
         total: number;
       }
     > = {};
 
+    const orderedTopics: string[] = [];
+
     filtered.forEach((m) => {
       const t = m.topic?.trim() || 'General';
       if (!topicMap[t]) {
-        topicMap[t] = { subtopics: {}, direct: [], total: 0 };
+        topicMap[t] = {
+          topicOrder: m.topicOrder ?? 0,
+          subtopics: {},
+          direct: [],
+          total: 0,
+        };
+        orderedTopics.push(t);
       }
       topicMap[t].total += 1;
 
       if (m.subtopic && m.subtopic.trim()) {
         const sub = m.subtopic.trim();
         if (!topicMap[t].subtopics[sub]) {
-          topicMap[t].subtopics[sub] = [];
+          topicMap[t].subtopics[sub] = {
+            subtopicOrder: m.subtopicOrder ?? 0,
+            items: [],
+          };
         }
-        topicMap[t].subtopics[sub].push(m);
+        topicMap[t].subtopics[sub].items.push(m);
       } else {
         topicMap[t].direct.push(m);
       }
     });
 
-    return topicMap;
+    return { groupedMaterials: topicMap, topicOrderList: orderedTopics };
   }, [materials, filterBatch, searchQuery]);
+
+  // -------------------------------------------------------------
+  // REORDERING HANDLERS
+  // -------------------------------------------------------------
+
+  // 1. Reorder Main Topics
+  const handleMoveTopic = async (topicName: string, direction: 'up' | 'down') => {
+    const idx = topicOrderList.indexOf(topicName);
+    if (idx < 0) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === topicOrderList.length - 1) return;
+
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const newOrder = [...topicOrderList];
+    const temp = newOrder[idx];
+    newOrder[idx] = newOrder[targetIdx];
+    newOrder[targetIdx] = temp;
+
+    // Optimistically update local materials
+    setMaterials((prev) => {
+      return prev.map((m) => {
+        const t = m.topic?.trim() || 'General';
+        const newPos = newOrder.indexOf(t);
+        if (newPos >= 0) {
+          return { ...m, topicOrder: newPos };
+        }
+        return m;
+      });
+    });
+
+    try {
+      setReordering(true);
+      const res = await reorderTopicsAction(newOrder);
+      if (!res.success) throw new Error(res.error);
+      toast.success(`Moved "${topicName}" ${direction}!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save topic order');
+      fetchData();
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  // 2. Reorder Subtopics within a Main Topic
+  const handleMoveSubtopic = async (topicName: string, subtopicName: string, direction: 'up' | 'down') => {
+    const topicData = groupedMaterials[topicName];
+    if (!topicData) return;
+
+    const subtopics = Object.keys(topicData.subtopics);
+    const idx = subtopics.indexOf(subtopicName);
+    if (idx < 0) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === subtopics.length - 1) return;
+
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const newOrder = [...subtopics];
+    const temp = newOrder[idx];
+    newOrder[idx] = newOrder[targetIdx];
+    newOrder[targetIdx] = temp;
+
+    // Optimistically update local materials
+    setMaterials((prev) => {
+      return prev.map((m) => {
+        const t = m.topic?.trim() || 'General';
+        const sub = m.subtopic?.trim();
+        if (t === topicName && sub) {
+          const newPos = newOrder.indexOf(sub);
+          if (newPos >= 0) {
+            return { ...m, subtopicOrder: newPos };
+          }
+        }
+        return m;
+      });
+    });
+
+    try {
+      setReordering(true);
+      const res = await reorderSubtopicsAction(topicName, newOrder);
+      if (!res.success) throw new Error(res.error);
+      toast.success(`Moved subtopic "${subtopicName}" ${direction}!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save subtopic order');
+      fetchData();
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  // 3. Reorder Individual Note / Material inside a Subtopic or Direct Topic
+  const handleMoveMaterial = async (
+    topicName: string,
+    subtopicName: string | null,
+    materialId: string,
+    direction: 'up' | 'down'
+  ) => {
+    const topicData = groupedMaterials[topicName];
+    if (!topicData) return;
+
+    let itemsList: any[] = [];
+    if (subtopicName) {
+      itemsList = topicData.subtopics[subtopicName]?.items || [];
+    } else {
+      itemsList = topicData.direct || [];
+    }
+
+    const idx = itemsList.findIndex((m) => m.id === materialId);
+    if (idx < 0) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === itemsList.length - 1) return;
+
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const newItems = [...itemsList];
+    const temp = newItems[idx];
+    newItems[idx] = newItems[targetIdx];
+    newItems[targetIdx] = temp;
+
+    const newIds = newItems.map((m) => m.id);
+
+    // Optimistically update
+    setMaterials((prev) => {
+      return prev.map((m) => {
+        const pos = newIds.indexOf(m.id);
+        if (pos >= 0) {
+          return { ...m, order: pos };
+        }
+        return m;
+      });
+    });
+
+    try {
+      setReordering(true);
+      const res = await reorderMaterialsAction(newIds);
+      if (!res.success) throw new Error(res.error);
+      toast.success(`Note reordered ${direction}!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save note order');
+      fetchData();
+    } finally {
+      setReordering(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -315,7 +473,7 @@ export default function MaterialsPage() {
           <span>Lesson Materials & Topic Vault</span>
         </h1>
         <p className="text-sm text-theme-sub mt-1">
-          Organize study guides by Main Topic (e.g., Unit / Module) and Subtopics. Upload multiple PDFs, PPTs, or DOCX documents (5MB max each).
+          Organize study guides by Main Topic (e.g., Unit / Module) and Subtopics. Reorder Main Topics, Subtopics, and individual notes using the up/down controls.
         </p>
       </div>
 
@@ -488,8 +646,13 @@ export default function MaterialsPage() {
               <Layers className="w-5 h-5 text-indigo-500" />
               <span>Hierarchical Notes Explorer</span>
             </h2>
-            <p className="text-xs text-theme-sub mt-0.5">
-              Click any Topic to expand or collapse its subtopics and files.
+            <p className="text-xs text-theme-sub mt-0.5 flex items-center space-x-1.5">
+              <span>Use</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-theme-card-sub border border-theme text-[10px] font-mono">
+                <ArrowUp className="w-3 h-3 inline mr-0.5" />
+                <ArrowDown className="w-3 h-3 inline" />
+              </span>
+              <span>arrows to reorder Main Topics, Subtopics, and individual files.</span>
             </p>
           </div>
 
@@ -529,7 +692,7 @@ export default function MaterialsPage() {
         {/* Hierarchical Topics Accordion List */}
         {loading ? (
           <div className="py-12 text-center text-theme-sub animate-pulse">Loading study topics and documents...</div>
-        ) : Object.keys(groupedMaterials).length === 0 ? (
+        ) : topicOrderList.length === 0 ? (
           <div className="text-center py-10 text-theme-sub">
             <Folder className="w-10 h-10 mx-auto mb-2 opacity-50 text-indigo-400" />
             <p className="text-sm font-semibold">No materials found.</p>
@@ -537,7 +700,9 @@ export default function MaterialsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {Object.entries(groupedMaterials).map(([topicName, data]) => {
+            {topicOrderList.map((topicName, topicIdx) => {
+              const data = groupedMaterials[topicName];
+              if (!data) return null;
               const isCollapsed = collapsedTopics[topicName];
               const subtopicKeys = Object.keys(data.subtopics);
 
@@ -547,18 +712,18 @@ export default function MaterialsPage() {
                   className="border border-theme rounded-2xl bg-theme-card-sub overflow-hidden shadow-sm transition-all"
                 >
                   {/* Topic Header */}
-                  <div
-                    onClick={() => toggleTopicCollapse(topicName)}
-                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/40 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-indigo-600/10 text-indigo-500 rounded-xl border border-indigo-500/20">
+                  <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 transition-colors">
+                    <div
+                      onClick={() => toggleTopicCollapse(topicName)}
+                      className="flex items-center space-x-3 cursor-pointer flex-1 min-w-0"
+                    >
+                      <div className="p-2 bg-indigo-600/10 text-indigo-500 rounded-xl border border-indigo-500/20 shrink-0">
                         {isCollapsed ? <Folder className="w-5 h-5" /> : <FolderOpen className="w-5 h-5" />}
                       </div>
-                      <div>
-                        <h3 className="font-bold text-theme-main text-base flex items-center space-x-2">
-                          <span>{topicName}</span>
-                          <span className="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 font-semibold rounded-full">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-theme-main text-base flex items-center space-x-2 truncate">
+                          <span className="truncate">{topicName}</span>
+                          <span className="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 font-semibold rounded-full shrink-0">
                             {data.total} file{data.total > 1 ? 's' : ''}
                           </span>
                         </h3>
@@ -570,10 +735,37 @@ export default function MaterialsPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    {/* Topic Reorder Controls & Collapse */}
+                    <div className="flex items-center space-x-1.5 shrink-0">
+                      <span className="text-[11px] text-theme-sub font-semibold uppercase mr-1 hidden sm:inline">
+                        Topic Order:
+                      </span>
                       <button
                         type="button"
+                        disabled={reordering || topicIdx === 0}
+                        onClick={() => handleMoveTopic(topicName, 'up')}
+                        className="p-1.5 text-theme-sub hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        title="Move Topic Up"
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={reordering || topicIdx === topicOrderList.length - 1}
+                        onClick={() => handleMoveTopic(topicName, 'down')}
+                        className="p-1.5 text-theme-sub hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        title="Move Topic Down"
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                      </button>
+
+                      <div className="h-4 w-px bg-theme mx-1" />
+
+                      <button
+                        type="button"
+                        onClick={() => toggleTopicCollapse(topicName)}
                         className="p-1.5 text-theme-sub hover:text-theme-main rounded-lg"
+                        title={isCollapsed ? 'Expand Topic' : 'Collapse Topic'}
                       >
                         {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                       </button>
@@ -584,23 +776,50 @@ export default function MaterialsPage() {
                   {!isCollapsed && (
                     <div className="p-4 pt-1 space-y-4 border-t border-theme bg-theme-card">
                       {/* Subtopic Sections */}
-                      {subtopicKeys.map((subName) => {
-                        const items = data.subtopics[subName];
+                      {subtopicKeys.map((subName, subIdx) => {
+                        const items = data.subtopics[subName].items;
                         return (
                           <div
                             key={subName}
-                            className="bg-theme-card-sub border border-theme rounded-xl p-3 space-y-3"
+                            className="bg-theme-card-sub border border-theme rounded-xl p-3.5 space-y-3"
                           >
-                            <div className="flex items-center justify-between">
+                            {/* Subtopic Header with Reorder Arrows */}
+                            <div className="flex items-center justify-between border-b border-theme/60 pb-2">
                               <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center space-x-1.5">
                                 <Folder className="w-3.5 h-3.5" />
                                 <span>Subtopic: {subName}</span>
                                 <span className="text-[10px] text-theme-sub font-normal">({items.length} files)</span>
                               </h4>
+
+                              <div className="flex items-center space-x-1">
+                                <span className="text-[10px] text-theme-sub font-semibold uppercase mr-1">
+                                  Subtopic Order:
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={reordering || subIdx === 0}
+                                  onClick={() => handleMoveSubtopic(topicName, subName, 'up')}
+                                  className="p-1 text-theme-sub hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                  title="Move Subtopic Up"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={reordering || subIdx === subtopicKeys.length - 1}
+                                  onClick={() => handleMoveSubtopic(topicName, subName, 'down')}
+                                  className="p-1 text-theme-sub hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                  title="Move Subtopic Down"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
 
                             <div className="divide-y divide-theme">
-                              {items.map((m) => renderMaterialRow(m))}
+                              {items.map((m, mIdx) =>
+                                renderMaterialRow(m, topicName, subName, mIdx, items.length)
+                              )}
                             </div>
                           </div>
                         );
@@ -615,7 +834,9 @@ export default function MaterialsPage() {
                             </h4>
                           )}
                           <div className="divide-y divide-theme bg-theme-card-sub border border-theme rounded-xl p-3">
-                            {data.direct.map((m) => renderMaterialRow(m))}
+                            {data.direct.map((m, mIdx) =>
+                              renderMaterialRow(m, topicName, null, mIdx, data.direct.length)
+                            )}
                           </div>
                         </div>
                       )}
@@ -807,8 +1028,14 @@ export default function MaterialsPage() {
     </div>
   );
 
-  // Helper renderer for a single material item row
-  function renderMaterialRow(m: any) {
+  // Helper renderer for a single material item row with Up/Down note reordering
+  function renderMaterialRow(
+    m: any,
+    topicName: string,
+    subtopicName: string | null,
+    itemIdx: number,
+    totalItems: number
+  ) {
     const batchName = batches.find((b) => b.id === m.batchId)?.name || (m.isGlobal ? 'All Batches (Global)' : 'General');
     const fileType = (m.fileType || 'file').toLowerCase();
     const fileUrl = formatCloudinaryFileUrl(m.fileUrl);
@@ -822,6 +1049,28 @@ export default function MaterialsPage() {
         className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-3 rounded-xl transition-colors"
       >
         <div className="flex items-center space-x-3 min-w-0">
+          {/* Note Reorder Arrows */}
+          <div className="flex flex-col items-center justify-center space-y-0.5 shrink-0 bg-theme-input p-1 rounded-lg border border-theme">
+            <button
+              type="button"
+              disabled={reordering || itemIdx === 0}
+              onClick={() => handleMoveMaterial(topicName, subtopicName, m.id, 'up')}
+              className="p-0.5 text-theme-sub hover:text-indigo-600 disabled:opacity-20 disabled:pointer-events-none"
+              title="Move Note Up"
+            >
+              <ArrowUp className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              disabled={reordering || itemIdx === totalItems - 1}
+              onClick={() => handleMoveMaterial(topicName, subtopicName, m.id, 'down')}
+              className="p-0.5 text-theme-sub hover:text-indigo-600 disabled:opacity-20 disabled:pointer-events-none"
+              title="Move Note Down"
+            >
+              <ArrowDown className="w-3 h-3" />
+            </button>
+          </div>
+
           <div className="p-2.5 bg-indigo-600/20 text-indigo-500 rounded-xl border border-indigo-500/20 shrink-0">
             <FileText className="w-5 h-5" />
           </div>

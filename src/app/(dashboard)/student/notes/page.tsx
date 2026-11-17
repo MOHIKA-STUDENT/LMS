@@ -47,8 +47,8 @@ export default function StudentNotesPage() {
     }));
   };
 
-  // Group materials by Topic -> Subtopic
-  const groupedMaterials = useMemo(() => {
+  // Group materials by Topic -> Subtopic in sorted sequence
+  const { groupedMaterials, orderedTopics } = useMemo(() => {
     let filtered = materials;
 
     if (searchQuery.trim()) {
@@ -71,10 +71,13 @@ export default function StudentNotesPage() {
       }
     > = {};
 
+    const topics: string[] = [];
+
     filtered.forEach((m) => {
       const t = m.topic?.trim() || 'General';
       if (!topicMap[t]) {
         topicMap[t] = { subtopics: {}, direct: [], total: 0 };
+        topics.push(t);
       }
       topicMap[t].total += 1;
 
@@ -89,10 +92,10 @@ export default function StudentNotesPage() {
       }
     });
 
-    return topicMap;
+    return { groupedMaterials: topicMap, orderedTopics: topics };
   }, [materials, searchQuery]);
 
-  const totalTopicsCount = Object.keys(groupedMaterials).length;
+  const totalTopicsCount = orderedTopics.length;
 
   return (
     <div className="space-y-6">
@@ -135,7 +138,9 @@ export default function StudentNotesPage() {
         </div>
       ) : (
         <div className="space-y-5">
-          {Object.entries(groupedMaterials).map(([topicName, data]) => {
+          {orderedTopics.map((topicName) => {
+            const data = groupedMaterials[topicName];
+            if (!data) return null;
             const isCollapsed = !!collapsedTopics[topicName];
             const subtopicKeys = Object.keys(data.subtopics);
 
